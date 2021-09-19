@@ -6,6 +6,9 @@
             "margusk\\GetSet\\": "src/"
         }
     },
+    "require": {
+        "php": "^8.0"
+    },
     "authors": [
         {
             "name": "Margus Kaidja",
