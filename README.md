@@ -8,7 +8,7 @@ It's main usage would be to provide setter method chaining in DTO-s (Data Transf
 
 Only requirement is **PHP 8**.
 
-## Examples
+## Basic Usage
 
 Consider the following class:
 ```php
