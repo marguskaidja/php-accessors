@@ -70,7 +70,9 @@ trait GetSetTrait
             $classConf = $parseAttributes($reflectionClass, null);
 
             // Parse attributes of each property
-            foreach ($reflectionClass->getProperties(ReflectionProperty::IS_PROTECTED) as $reflectionProperty) {
+            foreach ($reflectionClass->getProperties(
+                ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE
+            ) as $reflectionProperty) {
                 $property = $reflectionProperty->getName();
                 $lcaseProperty = strtolower($property);
 
@@ -112,7 +114,7 @@ trait GetSetTrait
         $conf = $conf['byCase'][$property];
 
         if (!$conf['set']) {
-            throw new InvalidArgumentException(sprintf('tried to set protected property "%s"', $property));
+            throw new InvalidArgumentException(sprintf('tried to set private/protected property "%s"', $property));
         }
 
         if (null !== $conf['mutator']) {
@@ -133,7 +135,7 @@ trait GetSetTrait
         $conf = $conf['byCase'][$property];
 
         if (!$conf['get']) {
-            throw new InvalidArgumentException(sprintf('tried to read protected property "%s"', $property));
+            throw new InvalidArgumentException(sprintf('tried to read private/protected property "%s"', $property));
         }
 
         return $this->{$property};
@@ -150,7 +152,7 @@ trait GetSetTrait
         $conf = $conf['byCase'][$property];
 
         if (!$conf['get']) {
-            throw new InvalidArgumentException(sprintf('tried to query protected property "%s"', $property));
+            throw new InvalidArgumentException(sprintf('tried to query private/protected property "%s"', $property));
         }
 
         return isset($this->{$property});
@@ -167,7 +169,7 @@ trait GetSetTrait
         $conf = $conf['byCase'][$property];
 
         if (!$conf['unset']) {
-            throw new InvalidArgumentException(sprintf('tried to unset protected property "%s"', $property));
+            throw new InvalidArgumentException(sprintf('tried to unset private/protected property "%s"', $property));
         }
 
         unset($this->{$property});
@@ -175,16 +177,35 @@ trait GetSetTrait
 
     public function __call(string $method, array $args): mixed
     {
+        $conf = $this->loadGetSetConfiguration();
+
         $lcaseMethod = strtolower($method);
         $prefix = substr($lcaseMethod, 0, 3);
 
-        if ('set' === $prefix ||
-            'get' === $prefix ||
-            in_array(($prefix = substr($lcaseMethod, 0, 5)), ['unset', 'isset'])
+        // Try to detect "setProperty", "getProperty", "issetProperty" or "unserProperty" calls.
+        if ('set' !== $prefix &&
+            'get' !== $prefix &&
+            !in_array(($prefix = substr($lcaseMethod, 0, 5)), ['unset', 'isset'])
         ) {
-            $conf = $this->loadGetSetConfiguration();
+            $prefix = null;
+        }
 
-            $property = substr($method, strlen($prefix));
+        $property = substr($method, strlen((string)$prefix));
+        $lcaseProperty = strtolower($property);
+
+        // If not one of the explicit calls above, then check if whole method name is property name like
+        //  $obj->somePropertyName('somevalue')
+        if (null === $prefix && isset($conf['byLCase'][$lcaseProperty])) {
+            // If there is zero arguments, then interpret the call as Getter
+            // If there are arguments, then it's Setter
+            if (count($args) > 0) {
+                $prefix = 's';
+            } else {
+                $prefix = 'g';
+            }
+        }
+
+        if (null !== $prefix) {
             $property = $conf['byLCase'][strtolower($property)] ?? $property;
 
             // Call Setter

@@ -18,6 +18,9 @@ class A
     #[Get,Set(true)]
     protected string $prop1;
 
+    #[Get(true)]
+    private string $prop2 = "";
+
     public static function mutatorProp1($n, $v)
     {
         return htmlspecialchars($v);
@@ -30,5 +33,6 @@ $a->prop1 = 'value1<>';
 
 echo 'isset("prop1"): ' . (int)$a->issetProp1() . "\n";
 echo 'prop1=' . $a->getProp1() . "\n";
+echo 'prop2=' . $a->prop2 . "\n";
 
 //$a->prop2 = 'value2';
