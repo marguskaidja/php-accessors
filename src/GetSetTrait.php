@@ -143,7 +143,7 @@ trait GetSetTrait
                 $propertyConf = $parseAttributes($reflectionProperty, $classConf);
 
                 // Mutator methodname can be in format:
-                //      "$this->someMethod"
+                //      "someFunction"
                 //      "self::someMethod"
                 //      "parent::someMethod"
                 //      "static::someMethod"
@@ -199,7 +199,7 @@ trait GetSetTrait
         }
 
         if (null !== $conf['mutator']) {
-            $value = call_user_func($conf['mutator'], $property, $value);
+            $value = call_user_func($conf['mutator'], $value);
         }
 
         $this->{$property} = $value;
