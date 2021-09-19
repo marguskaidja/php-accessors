@@ -1,5 +1,8 @@
 {
     "name": "margus/get-set",
+    "description": "Automatic getters and setters for PHP classes",
+    "prefer-stable": true,
+    "minimum-stability": "dev",
     "type": "library",
     "autoload": {
         "psr-4": {
@@ -14,6 +17,5 @@
             "name": "Margus Kaidja",
             "email": "margusk@gmail.com"
         }
-    ],
-    "require": {}
+    ]
 }
