@@ -1,0 +1,16 @@
+{
+    "name": "margus/get-set",
+    "type": "library",
+    "autoload": {
+        "psr-4": {
+            "margusk\\GetSet\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Margus Kaidja",
+            "email": "margusk@gmail.com"
+        }
+    ],
+    "require": {}
+}
