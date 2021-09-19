@@ -126,3 +126,44 @@ _Mutator_ parameter can contain a special variable named `%property%` which is r
 
 _Mutator_ callback receives the settable value as first parameter and the value it returns is then assigned to property.
     
+### Unsetting property
+
+It's also possible to unset property's value by using attribute `Delete`:
+```php
+#[Get,Set]
+class A
+{
+    use GetSetTrait;
+
+    #[Delete]
+    protected string $prop1;
+
+    protected string $prop2;
+}
+
+(new A())->unsetProp1();
+```
+
+Why `Delete` and not `Unset`? Because `Unset` is reserved word and can't be used as attribute nor class name.
+
+## Full API
+
+Properties can be accessed different ways.
+
+To `Get` value of property `$prop1`:
+* `echo $obj->prop1;`
+* `echo $obj->getProp1();`
+* `echo $obj->prop1();`
+
+To `Set` value of property `$prop1`:
+* `$obj->prop1 = 'some value';`
+* `$obj->setProp1('some value');`
+* `$obj->prop1('some value');`
+
+To `Delete` (unset) value of property `$prop1`:
+* `unset($obj->prop1);`
+* `$obj->unsetProp1();`
+
+To test if `$prop1` property is set. This is exposed with `Get` attribute:
+* `echo isset($obj->prop1);`
+* `echo $obj->issetProp1();`
