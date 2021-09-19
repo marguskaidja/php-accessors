@@ -12,7 +12,7 @@ class A
 {
     use margusk\GetSet\GetSetTrait;
 
-    #[Get,Set('mutator'),Delete]
+    #[Get,Set,Delete]
     protected string $prop1;
 
     #[Get]
@@ -21,7 +21,7 @@ class A
     #[Set]
     protected string $prop3;
 
-    private function mutatorProp1($value)
+    protected function mutatorProp1($value)
     {
         return ucfirst($value);
     }
@@ -33,6 +33,7 @@ $a = new A;
 $a->prop1 = 'value1';
 
 $a->setProP1('value1')->setProp3('value3');
-//unset($a->prop1);
+//$a->unsetProp1();
 
+echo "Isset: " . $a->issetProp1() . "\n";
 echo "Prop1: " . $a->prop1 . "\n";
