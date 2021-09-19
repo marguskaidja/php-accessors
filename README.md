@@ -84,7 +84,7 @@ class A
 }
 ```
 
-To disable setter method for `prop2`:
+To disable setter method for `$prop2`:
 ```php
 #[Get,Set]
 class A
@@ -97,3 +97,32 @@ class A
     protected string $prop2;
 }
 ```
+### Mutator
+
+Sometimes it's neccessary to pass the setter value through some method before assigning to property. This method is called _mutator_ and can be specified as second parameter for the `Set` attribute:
+```php
+#[Get,Set]
+class A
+{
+    use GetSetTrait;
+
+    #[Set(true, "htmlspecialchars")]
+    protected string $prop1;
+
+    protected string $prop2;
+}
+
+echo (new A())->setProp1('<>')->getProp1();  // Outputs "&lt;&gt;"
+```
+
+_Mutator_ parameter must be string and can contain function/method name in format:
+* `<function>`
+* `<class>::<method>`
+* `self::<method>`
+* `parent::<method>`
+* `static::<method>`
+
+_Mutator_ parameter can contain a special variable named `%property%` which is replaced by the property name it applies. This is useful only when specifying mutator globally in class attribute.
+
+_Mutator_ callback receives the settable value as first parameter and the value it returns is then assigned to property.
+    
