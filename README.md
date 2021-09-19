@@ -47,7 +47,7 @@ $a = (new A())->
 ```
 The code above has lot's of boilerplate code just to achieve simple method chaining through setter methods. In case there are tens of properties things could get messy fast.
 
-The class **A** above can be rewritten using **GetSet**:
+The class `A` above can be rewritten using **GetSet**:
 
 ```php
 use margusk\GetSet\Attributes\{
