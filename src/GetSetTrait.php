@@ -6,6 +6,8 @@ namespace margusk\GetSet;
 
 use BadMethodCallException;
 use InvalidArgumentException;
+use ReflectionClass;
+use ReflectionProperty;
 use margusk\GetSet\Attributes\Get;
 use margusk\GetSet\Attributes\Set;
 use margusk\GetSet\Attributes\Delete;
@@ -24,9 +26,9 @@ trait GetSetTrait
                 'byLCase' => []
             ];
 
-            $reflectionClass = new \ReflectionClass($cl);
+            $reflectionClass = new ReflectionClass($cl);
 
-            foreach ($reflectionClass->getProperties(\ReflectionProperty::IS_PROTECTED) as $reflectionProperty) {
+            foreach ($reflectionClass->getProperties(ReflectionProperty::IS_PROTECTED) as $reflectionProperty) {
                 $property = $reflectionProperty->getName();
                 $lcaseProperty = strtolower($property);
 
@@ -135,7 +137,7 @@ trait GetSetTrait
         unset($this->{$property});
     }
 
-    public function __call(string $method, array $args): static|bool
+    public function __call(string $method, array $args): mixed
     {
         $lcaseMethod = strtolower($method);
         $prefix = substr($lcaseMethod, 0, 3);
