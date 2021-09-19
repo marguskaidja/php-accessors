@@ -4,36 +4,31 @@ declare(strict_types=1);
 
 require_once __DIR__.'/../vendor/autoload.php';
 
-use margusk\GetSet\Attributes\Get;
-use margusk\GetSet\Attributes\Set;
-use margusk\GetSet\Attributes\Delete;
+use margusk\GetSet\Attributes\{
+    Get, Set, Delete
+};
+use margusk\GetSet\GetSetTrait;
 
+
+#[Get,Set(false, 'self::mutator%property%')]
 class A
 {
-    use margusk\GetSet\GetSetTrait;
+    use GetSetTrait;
 
-    #[Get,Set,Delete]
+    #[Get,Set(true)]
     protected string $prop1;
 
-    #[Get]
-    protected string $prop2;
-
-    #[Set]
-    protected string $prop3;
-
-    protected function mutatorProp1($value)
+    public static function mutatorProp1($n, $v)
     {
-        return ucfirst($value);
+        return htmlspecialchars($v);
     }
 }
 
 
 $a = new A;
+$a->prop1 = 'value1<>';
 
-$a->prop1 = 'value1';
+echo 'isset("prop1"): ' . (int)$a->issetProp1() . "\n";
+echo 'prop1=' . $a->getProp1() . "\n";
 
-$a->setProP1('value1')->setProp3('value3');
-//$a->unsetProp1();
-
-echo "Isset: " . $a->issetProp1() . "\n";
-echo "Prop1: " . $a->prop1 . "\n";
+//$a->prop2 = 'value2';

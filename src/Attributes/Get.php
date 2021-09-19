@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace margusk\GetSet\Attributes;
 
-#[\Attribute]
-class Get
+use Attribute;
+
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
+class Get extends Base
 {
 
 }

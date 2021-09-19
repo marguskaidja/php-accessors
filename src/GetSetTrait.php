@@ -26,39 +26,75 @@ trait GetSetTrait
                 'byLCase' => []
             ];
 
+            $parseAttributes = function (ReflectionClass|ReflectionProperty $reflection, ?array $conf) : array
+            {
+                if (null === $conf) {
+                    $conf = [
+                        'get'     => false,
+                        'set'     => false,
+                        'unset'   => false,
+                        'mutator' => null
+                    ];
+                }
+
+                foreach ($reflection->getAttributes() as $reflectionAttribute) {
+                    switch ($reflectionAttribute->getName()) {
+                        case Get::class:
+                            $conf['get'] = $reflectionAttribute->newInstance()->enabled();
+                            break;
+                        case Set::class:
+                            $inst = $reflectionAttribute->newInstance();
+                            $conf['set'] = $inst->enabled();
+                            $mutator = $inst->mutator();
+
+                            if (null !== $mutator) {
+                                if ("" === $mutator) {
+                                    $conf['mutator'] = null;
+                                } else {
+                                    $conf['mutator'] = $inst->mutator();
+                                }
+                            }
+                            break;
+                        case Delete::class:
+                            $conf['unset'] = $reflectionAttribute->newInstance()->enabled();
+                            break;
+                    }
+                }
+
+                return $conf;
+            };
+
             $reflectionClass = new ReflectionClass($cl);
 
+            // Parse class attributes
+            $classConf = $parseAttributes($reflectionClass, null);
+
+            // Parse attributes of each property
             foreach ($reflectionClass->getProperties(ReflectionProperty::IS_PROTECTED) as $reflectionProperty) {
                 $property = $reflectionProperty->getName();
                 $lcaseProperty = strtolower($property);
 
-                $conf[$cl]['byCase'][$property] = [
-                    'get' => false,
-                    'set' => false,
-                    'unset' => false,
-                    'mutator' => null
-                ];
+                $propertyConf = $parseAttributes($reflectionProperty, $classConf);
 
-                $conf[$cl]['byLCase'][$lcaseProperty] = $property;
+                // Mutator methodname can be in format:
+                //      "$this->someMethod"
+                //      "self::someMethod"
+                //      "parent::someMethod"
+                //      "static::someMethod"
+                //
+                // Name can also contain special variable '%property%' which is then replaced by the appropriate
+                // property name. This is useful only when specifying mutator through class attributes.
+                if (is_string($propertyConf['mutator'])) {
+                    $propertyConf['mutator'] = str_replace('%property%', $property, $propertyConf['mutator']);
+                    $splits = explode('::', $propertyConf['mutator'], 2);
 
-                foreach ($reflectionProperty->getAttributes() as $reflectionAttribute) {
-                    switch ($reflectionAttribute->getName()) {
-                        case Get::class:
-                            $conf[$cl]['byCase'][$property]['get'] = true;
-                            break;
-                        case Set::class:
-                            $conf[$cl]['byCase'][$property]['set'] = true;
-                            $mutatorMethod = 'mutator' . $property;
-
-                            if (method_exists($this, $mutatorMethod)) {
-                                $conf[$cl]['byCase'][$property]['mutator'] = [$this, $mutatorMethod];
-                            }
-                            break;
-                        case Delete::class:
-                            $conf[$cl]['byCase'][$property]['unset'] = true;
-                            break;
+                    if (2 === count($splits)) {
+                        $propertyConf['mutator'] = $splits;
                     }
                 }
+
+                $conf[$cl]['byCase'][$property] = $propertyConf;
+                $conf[$cl]['byLCase'][$lcaseProperty] = $property;
             }
         }
 
@@ -80,7 +116,7 @@ trait GetSetTrait
         }
 
         if (null !== $conf['mutator']) {
-            $value = call_user_func($conf['mutator'], $value);
+            $value = call_user_func($conf['mutator'], $property, $value);
         }
 
         $this->{$property} = $value;
@@ -178,6 +214,6 @@ trait GetSetTrait
             }
         }
 
-        throw new BadMethodCallException('unknown method %s', $method);
+        throw new BadMethodCallException(sprintf('unknown method %s', $method));
     }
 }
