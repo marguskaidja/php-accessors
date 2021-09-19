@@ -40,9 +40,14 @@ class A
         return $this;
     }
 }
+
+$a = (new A())->
+    setProp1('value1')->
+    setProp2('value2');
 ```
-This has lot's of boilerplate code just to achieve simple method chaining through setter methods.
-The class above can be rewritten with much shorter code:
+The code above has lot's of boilerplate code just to achieve simple method chaining through setter methods. In case there are tens of properties things could get messy fast.
+
+The class **A** above can be rewritten using **GetSet**:
 
 ```php
 use margusk\GetSet\Attributes\{
@@ -60,5 +65,9 @@ class A
     #[Get,Set]
     protected string $prop2;
 }
+
+$a = (new A())->
+    setProp1('value1')->
+    setProp2('value2');
 ```
 
