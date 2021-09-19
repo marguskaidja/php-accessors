@@ -6,7 +6,7 @@ It's main usage would be to provide setter method chaining in DTO-s (Data Transf
 
 ## Requirements
 
-Only requirement is **PHP 8**.
+It requires **PHP 8** since the configuration is implemented using [attributes](https://www.php.net/manual/en/language.attributes.overview.php).
 
 ## Basic Usage
 
@@ -25,7 +25,7 @@ class A
 
     public function getProp2()
     {
-        return $this->prop2
+        return $this->prop2;
     }
 
     public function setProp1($value)
@@ -45,9 +45,9 @@ $a = (new A())->
     setProp1('value1')->
     setProp2('value2');
 ```
-The code above has lot's of boilerplate code just to achieve simple method chaining through setter methods. In case there are tens of properties things could get messy fast.
+The code above has lot's of boilerplate and boring duplicate code just to achieve smooth method chaining. In case there are tens of properties things could get quite tedious.
 
-The class `A` above can be rewritten using **GetSet**:
+The class `A` above can be rewritten using **GetSet** trait:
 
 ```php
 use margusk\GetSet\Attributes\{
@@ -71,3 +71,29 @@ $a = (new A())->
     setProp2('value2');
 ```
 
+When you have lot's of properties you want to expose, then it's not reasonable to mark each one of them separately. Mark all properties settable / gettable at once:
+```php
+#[Get,Set]
+class A
+{
+    use GetSetTrait;
+
+    protected string $prop1;
+
+    protected string $prop2;
+}
+```
+
+To disable setter method for `prop2`:
+```php
+#[Get,Set]
+class A
+{
+    use GetSetTrait;
+
+    protected string $prop1;
+
+    #[Set(false)]
+    protected string $prop2;
+}
+```
