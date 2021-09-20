@@ -1,9 +1,15 @@
 {
-    "name": "margus/get-set",
+    "name": "margusk/getset",
     "description": "Automatic getters and setters for PHP classes",
-    "prefer-stable": true,
-    "minimum-stability": "dev",
     "type": "library",
+    "keywords": ["getters", "setters"],
+    "authors": [
+        {
+            "name": "Margus Kaidja",
+            "email": "margusk@gmail.com"
+        }
+    ],
+    "license": "MIT",
     "autoload": {
         "psr-4": {
             "margusk\\GetSet\\": "src/"
@@ -11,11 +17,5 @@
     },
     "require": {
         "php": "^8.0"
-    },
-    "authors": [
-        {
-            "name": "Margus Kaidja",
-            "email": "margusk@gmail.com"
-        }
-    ]
+    }
 }
