@@ -4,9 +4,11 @@ This library helps to create automatic getter / setter methods for class propert
 
 It's main usage would be to provide setter method chaining in DTO-s (Data Transfer Objects).
 
+Due the fact that it's configuration is built upon [PHP attributes](https://www.php.net/manual/en/language.attributes.overview.php), it's faster and more native than the implementations which use DocBlocks to parse out information about which property and how should be made accessible.
+
 ## Requirements
 
-It requires **PHP 8** since the configuration is implemented using [attributes](https://www.php.net/manual/en/language.attributes.overview.php).
+Only requirement is **PHP 8**. No external library is needed.
 
 ## Installation
 
