@@ -12,11 +12,11 @@ declare(strict_types=1);
 
 namespace margusk\GetSet;
 
-use BadMethodCallException;
-use InvalidArgumentException;
 use margusk\GetSet\Attributes\Delete;
 use margusk\GetSet\Attributes\Get;
 use margusk\GetSet\Attributes\Set;
+use margusk\GetSet\Exceptions\BadMethodCallException;
+use margusk\GetSet\Exceptions\InvalidArgumentException;
 use ReflectionClass;
 use ReflectionProperty;
 
