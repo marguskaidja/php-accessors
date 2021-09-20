@@ -4,9 +4,19 @@ This library helps to create automatic getter / setter methods for class propert
 
 It's main usage would be to provide setter method chaining in DTO-s (Data Transfer Objects).
 
+Due the fact that it's configuration is built upon [PHP attributes](https://www.php.net/manual/en/language.attributes.overview.php), it's faster and more native than the implementations which use DocBlocks to parse out information about which property and how should be made accessible.
+
 ## Requirements
 
-It requires **PHP 8** since the configuration is implemented using [attributes](https://www.php.net/manual/en/language.attributes.overview.php).
+Only requirement is **PHP 8**. No external library is needed.
+
+## Installation
+
+Install with composer:
+
+```bash
+composer require margusk/getset
+```
 
 ## Basic Usage
 
@@ -148,22 +158,30 @@ Why `Delete` and not `Unset`? Because `Unset` is reserved word and can't be used
 
 ## Full API
 
-Properties can be accessed different ways.
+### Exposing properties
 
-To `Get` value of property `$prop1`:
+1. Use `margusk\GetSet\GetSetTrait` inside the class which properties you want to expose
+2. Add attribute `Get`, `Set` and/or `Delete` before the declaration of the property you want to expose. Alternatively if you want to expose all class properties at once, add the attribute before class declaration.
+   * `margusk\GetSet\Attributes\Get(bool $enabled = true)`: allow or disable to read and use `isset()` on the property.
+   * `margusk\GetSet\Attributes\Set(bool $enabled = true, string $mutator = null)`: allow or disable to update the property. Second argument denotes optional _Mutator_ method through which the value is passed through before assigning to property.
+   * `margusk\GetSet\Attributes\Delete(bool $enabled = true)`: allow or disable to `unset()` the property.
+
+### Properties can be accessed as following
+
+To read the value of property `$prop1`:
 * `echo $obj->prop1;`
 * `echo $obj->getProp1();`
 * `echo $obj->prop1();`
 
-To `Set` value of property `$prop1`:
+To update the value of property `$prop1`:
 * `$obj->prop1 = 'some value';`
 * `$obj->setProp1('some value');`
 * `$obj->prop1('some value');`
 
-To `Delete` (unset) value of property `$prop1`:
+To unset the value of property `$prop1`:
 * `unset($obj->prop1);`
 * `$obj->unsetProp1();`
 
-To test if `$prop1` property is set. This is exposed with `Get` attribute:
+To test if `$prop1` property is set. This is allowed/disabled with `Get` attribute:
 * `echo isset($obj->prop1);`
 * `echo $obj->issetProp1();`
