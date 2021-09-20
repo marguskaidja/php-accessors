@@ -8,6 +8,14 @@ It's main usage would be to provide setter method chaining in DTO-s (Data Transf
 
 It requires **PHP 8** since the configuration is implemented using [attributes](https://www.php.net/manual/en/language.attributes.overview.php).
 
+## Installation
+
+Install with composer:
+
+```bash
+composer require margusk/getset
+```
+
 ## Basic Usage
 
 Consider the following class:
