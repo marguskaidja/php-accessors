@@ -15,11 +15,11 @@ namespace margusk\GetSet\Attributes;
 class Base
 {
     public function __construct(
-        protected bool $enabled = true
+        protected ?bool $enabled = true
     ) {
     }
 
-    public function enabled(): bool
+    public function enabled(): ?bool
     {
         return $this->enabled;
     }

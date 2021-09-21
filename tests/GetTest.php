@@ -100,4 +100,15 @@ class GetTest extends TestCase
         $this->assertEquals(true, $obj->issetP1());
     }
 
+    public function test_attributes_must_be_inherited_from_parent_class()
+    {
+        $obj = new class extends ParentTestClass {
+            protected string $p1 = 'this is protected value';
+        };
+
+        $value = 'this is protected value';
+        $this->assertEquals($value, $obj->p1);
+        $this->assertEquals($value, $obj->getP1());
+        $this->assertEquals($value, $obj->p1());
+    }
 }
