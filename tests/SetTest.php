@@ -174,4 +174,20 @@ class SetTest extends TestCase
 
         $obj->p2 = 'this must fail';
     }
+
+    public function test_attributes_must_be_inherited_from_parent_class()
+    {
+        $obj = new class extends ParentTestClass {
+            protected string $p1;
+
+            public function getP1Value()
+            {
+                return $this->p1;
+            }
+        };
+
+        $value = 'this is protected value';
+        $obj->p1 = $value;
+        $this->assertEquals($value, $obj->getP1Value());
+    }
 }

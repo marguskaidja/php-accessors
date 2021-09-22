@@ -19,7 +19,7 @@ class Set extends Base
 {
     protected $mutator;
 
-    public function __construct(bool $enabled = true, string $mutator = null)
+    public function __construct(?bool $enabled = true, string $mutator = null)
     {
         parent::__construct($enabled);
         $this->mutator = $mutator;

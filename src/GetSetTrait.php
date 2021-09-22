@@ -87,46 +87,64 @@ trait GetSetTrait
 
     protected function loadGetSetConfiguration(): array
     {
-        static $conf = [];
+        static $classesConf = [];
+        static $propertiesConf = [];
 
-        $cl = static::class;
+        $curClassName = static::class;
 
-        if (!isset($conf[$cl])) {
-            $conf[$cl] = [
+        if (!isset($propertiesConf[$curClassName])) {
+
+            $propertiesConf[$curClassName] = [
                 'byCase'  => [],
                 'byLCase' => []
             ];
 
-            $parseAttributes = function (ReflectionClass|ReflectionProperty $reflection, ?array $conf): array {
-                if (null === $conf) {
-                    $conf = [
-                        'get'     => false,
-                        'set'     => false,
-                        'unset'   => false,
-                        'mutator' => null
+            $parseAttributes = function (ReflectionClass|ReflectionProperty $reflection): array
+            {
+                $conf = [];
+                foreach (['get', 'set', 'unset', 'mutator'] as $f) {
+                    $conf[$f] = [
+                        'isset' => false,
+                        'value' => null
                     ];
                 }
 
                 foreach ($reflection->getAttributes() as $reflectionAttribute) {
                     switch ($reflectionAttribute->getName()) {
                         case Get::class:
-                            $conf['get'] = $reflectionAttribute->newInstance()->enabled();
+                            $enabled = $reflectionAttribute->newInstance()->enabled();
+                            if (null !== $enabled) {
+                                $conf['get'] = [
+                                    'isset' => true,
+                                    'value' => $enabled
+                                ];
+                            }
                             break;
                         case Set::class:
                             $inst = $reflectionAttribute->newInstance();
-                            $conf['set'] = $inst->enabled();
+                            $enabled = $inst->enabled();
+                            if (null !== $enabled) {
+                                $conf['set'] = [
+                                    'isset' => true,
+                                    'value' => $enabled
+                                ];
+                            }
                             $mutator = $inst->mutator();
-
                             if (null !== $mutator) {
-                                if ("" === $mutator) {
-                                    $conf['mutator'] = null;
-                                } else {
-                                    $conf['mutator'] = $inst->mutator();
-                                }
+                                $conf['mutator'] = [
+                                    'isset' => true,
+                                    'value' => ("" !== $mutator ? $mutator : null)
+                                ];
                             }
                             break;
                         case Delete::class:
-                            $conf['unset'] = $reflectionAttribute->newInstance()->enabled();
+                            $enabled = $reflectionAttribute->newInstance()->enabled();
+                            if (null !== $enabled) {
+                                $conf['unset'] = [
+                                    'isset' => true,
+                                    'value' => $enabled
+                                ];
+                            }
                             break;
                     }
                 }
@@ -134,21 +152,55 @@ trait GetSetTrait
                 return $conf;
             };
 
-            $reflectionClass = new ReflectionClass($cl);
+            $mergeAttributes = function (?array $parent, array $child): array
+            {
+                if (null !== $parent) {
+                    foreach (['get', 'set', 'unset', 'mutator'] as $f) {
+                        if (!$child[$f]['isset']) {
+                            $child[$f] = $parent[$f];
+                        }
+                    }
+                }
 
-            // Parse class attributes
-            $classConf = $parseAttributes($reflectionClass, null);
+                return $child;
+            };
+
+            $classNames = array_reverse(array_merge([$curClassName], class_parents($curClassName)));
+            $mergedClassAttr = null;
+
+            foreach ($classNames as $className) {
+                if (!isset($classesConf[$className])) {
+                    $classAttr = $parseAttributes(new ReflectionClass($className));
+
+                    $mergedClassAttr = $mergeAttributes($mergedClassAttr, $classAttr);
+                    $classesConf[$className] = $mergedClassAttr;
+                } else {
+                    $mergedClassAttr = $classesConf[$className];
+                }
+            }
 
             // Parse attributes of each property
             foreach (
-                $reflectionClass->getProperties(
+                (new ReflectionClass($curClassName))->getProperties(
                     ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE
                 ) as $reflectionProperty
             ) {
                 $property = $reflectionProperty->getName();
                 $lcaseProperty = strtolower($property);
 
-                $propertyConf = $parseAttributes($reflectionProperty, $classConf);
+                $propertyConfRaw = $mergeAttributes(
+                    $classesConf[$curClassName],
+                    $parseAttributes($reflectionProperty)
+                );
+
+                $propertyConf = [];
+                foreach ($propertyConfRaw as $f => $v) {
+                    if ($v['isset']) {
+                        $propertyConf[$f] = $v['value'];
+                    } else {
+                        $propertyConf[$f] = ('mutator' === $f ? null : false);
+                    }
+                }
 
                 // Mutator methodname can be in format:
                 //      "someFunction"
@@ -167,12 +219,12 @@ trait GetSetTrait
                     }
                 }
 
-                $conf[$cl]['byCase'][$property] = $propertyConf;
-                $conf[$cl]['byLCase'][$lcaseProperty] = $property;
+                $propertiesConf[$curClassName]['byCase'][$property] = $propertyConf;
+                $propertiesConf[$curClassName]['byLCase'][$lcaseProperty] = $property;
             }
         }
 
-        return $conf[$cl];
+        return $propertiesConf[$curClassName];
     }
 
     public function __get(string $property): mixed
