@@ -24,7 +24,7 @@ trait GetSetTrait
 {
     public function __call(string $method, array $args): mixed
     {
-        $conf = $this->loadGetSetConfiguration();
+        $conf = loadConfiguration(static::class);
 
         $lcaseMethod = strtolower($method);
         $prefix = substr($lcaseMethod, 0, 3);
@@ -85,151 +85,9 @@ trait GetSetTrait
         throw new BadMethodCallException(sprintf('unknown method %s', $method));
     }
 
-    protected function loadGetSetConfiguration(): array
-    {
-        static $classesConf = [];
-        static $propertiesConf = [];
-
-        $curClassName = static::class;
-
-        if (!isset($propertiesConf[$curClassName])) {
-
-            $propertiesConf[$curClassName] = [
-                'byCase'  => [],
-                'byLCase' => []
-            ];
-
-            $parseAttributes = function (ReflectionClass|ReflectionProperty $reflection): array
-            {
-                $conf = [];
-                foreach (['get', 'set', 'unset', 'mutator'] as $f) {
-                    $conf[$f] = [
-                        'isset' => false,
-                        'value' => null
-                    ];
-                }
-
-                foreach ($reflection->getAttributes() as $reflectionAttribute) {
-                    switch ($reflectionAttribute->getName()) {
-                        case Get::class:
-                            $enabled = $reflectionAttribute->newInstance()->enabled();
-                            if (null !== $enabled) {
-                                $conf['get'] = [
-                                    'isset' => true,
-                                    'value' => $enabled
-                                ];
-                            }
-                            break;
-                        case Set::class:
-                            $inst = $reflectionAttribute->newInstance();
-                            $enabled = $inst->enabled();
-                            if (null !== $enabled) {
-                                $conf['set'] = [
-                                    'isset' => true,
-                                    'value' => $enabled
-                                ];
-                            }
-                            $mutator = $inst->mutator();
-                            if (null !== $mutator) {
-                                $conf['mutator'] = [
-                                    'isset' => true,
-                                    'value' => ("" !== $mutator ? $mutator : null)
-                                ];
-                            }
-                            break;
-                        case Delete::class:
-                            $enabled = $reflectionAttribute->newInstance()->enabled();
-                            if (null !== $enabled) {
-                                $conf['unset'] = [
-                                    'isset' => true,
-                                    'value' => $enabled
-                                ];
-                            }
-                            break;
-                    }
-                }
-
-                return $conf;
-            };
-
-            $mergeAttributes = function (?array $parent, array $child): array
-            {
-                if (null !== $parent) {
-                    foreach (['get', 'set', 'unset', 'mutator'] as $f) {
-                        if (!$child[$f]['isset']) {
-                            $child[$f] = $parent[$f];
-                        }
-                    }
-                }
-
-                return $child;
-            };
-
-            $classNames = array_reverse(array_merge([$curClassName], class_parents($curClassName)));
-            $mergedClassAttr = null;
-
-            foreach ($classNames as $className) {
-                if (!isset($classesConf[$className])) {
-                    $classAttr = $parseAttributes(new ReflectionClass($className));
-
-                    $mergedClassAttr = $mergeAttributes($mergedClassAttr, $classAttr);
-                    $classesConf[$className] = $mergedClassAttr;
-                } else {
-                    $mergedClassAttr = $classesConf[$className];
-                }
-            }
-
-            // Parse attributes of each property
-            foreach (
-                (new ReflectionClass($curClassName))->getProperties(
-                    ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE
-                ) as $reflectionProperty
-            ) {
-                $property = $reflectionProperty->getName();
-                $lcaseProperty = strtolower($property);
-
-                $propertyConfRaw = $mergeAttributes(
-                    $classesConf[$curClassName],
-                    $parseAttributes($reflectionProperty)
-                );
-
-                $propertyConf = [];
-                foreach ($propertyConfRaw as $f => $v) {
-                    if ($v['isset']) {
-                        $propertyConf[$f] = $v['value'];
-                    } else {
-                        $propertyConf[$f] = ('mutator' === $f ? null : false);
-                    }
-                }
-
-                // Mutator methodname can be in format:
-                //      "someFunction"
-                //      "self::someMethod"
-                //      "parent::someMethod"
-                //      "static::someMethod"
-                //
-                // Name can also contain special variable '%property%' which is then replaced by the appropriate
-                // property name. This is useful only when specifying mutator through class attributes.
-                if (is_string($propertyConf['mutator'])) {
-                    $propertyConf['mutator'] = str_replace('%property%', $property, $propertyConf['mutator']);
-                    $splits = explode('::', $propertyConf['mutator'], 2);
-
-                    if (2 === count($splits)) {
-                        $propertyConf['mutator'] = $splits;
-                    }
-                }
-
-                $propertiesConf[$curClassName]['byCase'][$property] = $propertyConf;
-                $propertiesConf[$curClassName]['byLCase'][$lcaseProperty] = $property;
-            }
-        }
-
-        return $propertiesConf[$curClassName];
-    }
-
     public function __get(string $property): mixed
     {
-        $conf = $this->loadGetSetConfiguration();
+        $conf = loadConfiguration(static::class);
 
         if (!isset($conf['byCase'][$property])) {
             throw new InvalidArgumentException(sprintf('tried to read unknown property "%s"', $property));
@@ -246,7 +104,7 @@ trait GetSetTrait
 
     public function __set(string $property, mixed $value): void
     {
-        $conf = $this->loadGetSetConfiguration();
+        $conf = loadConfiguration(static::class);
 
         if (!isset($conf['byCase'][$property])) {
             throw new InvalidArgumentException(sprintf('tried to set unknown property "%s"', $property));
@@ -267,7 +125,7 @@ trait GetSetTrait
 
     public function __isset(string $property): bool
     {
-        $conf = $this->loadGetSetConfiguration();
+        $conf = loadConfiguration(static::class);
 
         if (!isset($conf['byCase'][$property])) {
             throw new InvalidArgumentException(sprintf('tried to query unknown property "%s"', $property));
@@ -284,7 +142,7 @@ trait GetSetTrait
 
     public function __unset(string $property): void
     {
-        $conf = $this->loadGetSetConfiguration();
+        $conf = loadConfiguration(static::class);
 
         if (!isset($conf['byCase'][$property])) {
             throw new InvalidArgumentException(sprintf('tried to unset unknown property "%s"', $property));
@@ -298,4 +156,141 @@ trait GetSetTrait
 
         unset($this->{$property});
     }
+}
+
+function loadConfiguration(string $curClassName): array
+{
+    static $classesConf = [];
+    static $propertiesConf = [];
+
+    if (!isset($propertiesConf[$curClassName])) {
+        $propertiesConf[$curClassName] = [
+            'byCase'  => [],
+            'byLCase' => []
+        ];
+
+        $parseAttributes = function (ReflectionClass|ReflectionProperty $reflection): array {
+            $conf = [];
+            foreach (['get', 'set', 'unset', 'mutator'] as $f) {
+                $conf[$f] = [
+                    'isset' => false,
+                    'value' => null
+                ];
+            }
+
+            foreach ($reflection->getAttributes() as $reflectionAttribute) {
+                switch ($reflectionAttribute->getName()) {
+                    case Get::class:
+                        $enabled = $reflectionAttribute->newInstance()->enabled();
+                        if (null !== $enabled) {
+                            $conf['get'] = [
+                                'isset' => true,
+                                'value' => $enabled
+                            ];
+                        }
+                        break;
+                    case Set::class:
+                        $inst = $reflectionAttribute->newInstance();
+                        $enabled = $inst->enabled();
+                        if (null !== $enabled) {
+                            $conf['set'] = [
+                                'isset' => true,
+                                'value' => $enabled
+                            ];
+                        }
+                        $mutator = $inst->mutator();
+                        if (null !== $mutator) {
+                            $conf['mutator'] = [
+                                'isset' => true,
+                                'value' => ("" !== $mutator ? $mutator : null)
+                            ];
+                        }
+                        break;
+                    case Delete::class:
+                        $enabled = $reflectionAttribute->newInstance()->enabled();
+                        if (null !== $enabled) {
+                            $conf['unset'] = [
+                                'isset' => true,
+                                'value' => $enabled
+                            ];
+                        }
+                        break;
+                }
+            }
+
+            return $conf;
+        };
+
+        $mergeAttributes = function (?array $parent, array $child): array {
+            if (null !== $parent) {
+                foreach (['get', 'set', 'unset', 'mutator'] as $f) {
+                    if (!$child[$f]['isset']) {
+                        $child[$f] = $parent[$f];
+                    }
+                }
+            }
+
+            return $child;
+        };
+
+        $classNames = array_reverse(array_merge([$curClassName], class_parents($curClassName)));
+        $mergedClassAttr = null;
+
+        foreach ($classNames as $className) {
+            if (!isset($classesConf[$className])) {
+                $classAttr = $parseAttributes(new ReflectionClass($className));
+
+                $mergedClassAttr = $mergeAttributes($mergedClassAttr, $classAttr);
+                $classesConf[$className] = $mergedClassAttr;
+            } else {
+                $mergedClassAttr = $classesConf[$className];
+            }
+        }
+
+        // Parse attributes of each property
+        foreach (
+            (new ReflectionClass($curClassName))->getProperties(
+                ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE
+            ) as $reflectionProperty
+        ) {
+            $property = $reflectionProperty->getName();
+            $lcaseProperty = strtolower($property);
+
+            $propertyConfRaw = $mergeAttributes(
+                $classesConf[$curClassName],
+                $parseAttributes($reflectionProperty)
+            );
+
+            $propertyConf = [];
+            foreach ($propertyConfRaw as $f => $v) {
+                if ($v['isset']) {
+                    $propertyConf[$f] = $v['value'];
+                } else {
+                    $propertyConf[$f] = ('mutator' === $f ? null : false);
+                }
+            }
+
+            // Mutator methodname can be in format:
+            //      "someFunction"
+            //      "self::someMethod"
+            //      "parent::someMethod"
+            //      "static::someMethod"
+            //
+            // Name can also contain special variable '%property%' which is then replaced by the appropriate
+            // property name. This is useful only when specifying mutator through class attributes.
+            if (is_string($propertyConf['mutator'])) {
+                $propertyConf['mutator'] = str_replace('%property%', $property, $propertyConf['mutator']);
+                $splits = explode('::', $propertyConf['mutator'], 2);
+
+                if (2 === count($splits)) {
+                    $propertyConf['mutator'] = $splits;
+                }
+            }
+
+            $propertiesConf[$curClassName]['byCase'][$property] = $propertyConf;
+            $propertiesConf[$curClassName]['byLCase'][$lcaseProperty] = $property;
+        }
+    }
+
+    return $propertiesConf[$curClassName];
 }
