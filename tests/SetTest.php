@@ -190,4 +190,27 @@ class SetTest extends TestCase
         $obj->p1 = $value;
         $this->assertEquals($value, $obj->getP1Value());
     }
+
+    public function test_honour_existing_setter_method()
+    {
+        $obj = new #[Set] class {
+            use GetSetTrait;
+
+            protected string $p1;
+
+            public function setP1($value)
+            {
+                $this->p1 = 'mutated value';
+            }
+
+            public function getP1value()
+            {
+                return $this->p1;
+            }
+        };
+
+        $obj->p1 = 'updated value';
+
+        $this->assertEquals('mutated value', $obj->getP1value());
+    }
 }
