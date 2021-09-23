@@ -2,7 +2,7 @@
     "name": "margusk/getset",
     "description": "Automatic getters and setters for PHP classes",
     "type": "library",
-    "keywords": ["getters", "setters"],
+    "keywords": ["getter", "setter", "getters", "setters"],
     "authors": [
         {
             "name": "Margus Kaidja",
