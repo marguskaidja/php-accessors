@@ -111,4 +111,36 @@ class GetTest extends TestCase
         $this->assertEquals($value, $obj->getP1());
         $this->assertEquals($value, $obj->p1());
     }
+
+    public function test_honour_existing_getter_method()
+    {
+        $obj = new #[Get] class {
+            use GetSetTrait;
+
+            protected string $p1 = 'starting value';
+
+            public function getP1()
+            {
+                return 'value from getter';
+            }
+        };
+
+        $this->assertEquals('value from getter', $obj->p1);
+    }
+
+    public function test_honour_existing_isset_method()
+    {
+        $obj = new #[Get] class {
+            use GetSetTrait;
+
+            protected string $p1 = 'starting value';
+
+            public function issetP1()
+            {
+                return false;
+            }
+        };
+
+        $this->assertEquals(false, isset($obj->p1));
+    }
 }

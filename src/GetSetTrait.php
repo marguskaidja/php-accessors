@@ -18,6 +18,7 @@ use margusk\GetSet\Attributes\Set;
 use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\Exceptions\InvalidArgumentException;
 use ReflectionClass;
+use ReflectionMethod;
 use ReflectionProperty;
 
 trait GetSetTrait
@@ -43,7 +44,7 @@ trait GetSetTrait
         // If not one of the explicit calls above, then check if whole method name is property name like
         //  $obj->somePropertyName('somevalue')
         if (null === $prefix && isset($conf['byLCase'][$lcaseProperty])) {
-            // If there is zero arguments, then interpret the call as Getter
+            // If there are zero arguments, then interpret the call as Getter
             // If there are arguments, then it's Setter
             if (count($args) > 0) {
                 $prefix = 's';
@@ -99,6 +100,10 @@ trait GetSetTrait
             throw new InvalidArgumentException(sprintf('tried to read private/protected property "%s"', $property));
         }
 
+        if (isset($conf['existingMethods']['get'])) {
+            return $this->{$conf['existingMethods']['get']}();
+        }
+
         return $this->{$property};
     }
 
@@ -120,7 +125,11 @@ trait GetSetTrait
             $value = call_user_func($conf['mutator'], $value);
         }
 
-        $this->{$property} = $value;
+        if (isset($conf['existingMethods']['set'])) {
+            $this->{$conf['existingMethods']['set']}($value);
+        } else {
+            $this->{$property} = $value;
+        }
     }
 
     public function __isset(string $property): bool
@@ -135,6 +144,10 @@ trait GetSetTrait
 
         if (!$conf['get']) {
             throw new InvalidArgumentException(sprintf('tried to query private/protected property "%s"', $property));
+        }
+
+        if (isset($conf['existingMethods']['isset'])) {
+            return $this->{$conf['existingMethods']['isset']}();
         }
 
         return isset($this->{$property});
@@ -154,7 +167,11 @@ trait GetSetTrait
             throw new InvalidArgumentException(sprintf('tried to unset private/protected property "%s"', $property));
         }
 
-        unset($this->{$property});
+        if (isset($conf['existingMethods']['unset'])) {
+            $this->{$conf['existingMethods']['unset']}();
+        } else {
+            unset($this->{$property});
+        }
     }
 }
 
@@ -247,12 +264,21 @@ function loadConfiguration(string $curClassName): array
             }
         }
 
+        $reflectionClass = new ReflectionClass($curClassName);
+
+        // Parse all existing 'set*', 'get*', 'isset*' and 'unset*' methods
+        $existingMethods = [];
+        foreach ($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC) as $reflectionMethod) {
+            /** @var $reflectionMethod ReflectionMethod */
+            if (!$reflectionMethod->isStatic()
+                && preg_match('/^(set|get|isset|unset)(.+)/', strtolower($reflectionMethod->getName()), $matches)
+            ) {
+                $existingMethods[$matches[2]][$matches[1]] = $reflectionMethod->getName();
+            }
+        }
+
         // Parse attributes of each property
-        foreach (
-            (new ReflectionClass($curClassName))->getProperties(
-                ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE
-            ) as $reflectionProperty
-        ) {
+        foreach ($reflectionClass->getProperties(ReflectionProperty::IS_PROTECTED) as $reflectionProperty) {
             $property = $reflectionProperty->getName();
             $lcaseProperty = strtolower($property);
 
@@ -269,6 +295,8 @@ function loadConfiguration(string $curClassName): array
                     $propertyConf[$f] = ('mutator' === $f ? null : false);
                 }
             }
+
+            $propertyConf['existingMethods'] = $existingMethods[$lcaseProperty] ?? [];
 
             // Mutator methodname can be in format:
             //      "someFunction"
