@@ -121,13 +121,13 @@ trait GetSetTrait
             throw new InvalidArgumentException(sprintf('tried to set private/protected property "%s"', $property));
         }
 
-        if (null !== $conf['mutator']) {
-            $value = call_user_func($conf['mutator'], $value);
-        }
-
         if (isset($conf['existingMethods']['set'])) {
             $this->{$conf['existingMethods']['set']}($value);
         } else {
+            if (null !== $conf['mutator']) {
+                $value = call_user_func($conf['mutator'], $value);
+            }
+
             $this->{$property} = $value;
         }
     }
