@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\GetSet;
 
+use margusk\GetSet\Attributes\CaseInsensitive;
 use margusk\GetSet\Attributes\Delete;
 use margusk\GetSet\Attributes\Get;
 use margusk\GetSet\Attributes\Set;
@@ -30,7 +31,7 @@ trait GetSetTrait
         $lcaseMethod = strtolower($method);
         $prefix = substr($lcaseMethod, 0, 3);
 
-        // Try to detect "setProperty", "getProperty", "issetProperty" or "unserProperty" calls.
+        // Detect between "set<Property>", "get<Property>", "isset<Property>" or "unset<Property>" calls.
         if ('set' !== $prefix
             && 'get' !== $prefix
             && !in_array(($prefix = substr($lcaseMethod, 0, 5)), ['unset', 'isset'])
@@ -88,13 +89,11 @@ trait GetSetTrait
 
     public function __get(string $property): mixed
     {
-        $conf = loadConfiguration(static::class);
+        $conf = loadConfiguration(static::class)['getPropertyConf']($property);
 
-        if (!isset($conf['byCase'][$property])) {
+        if (!isset($conf)) {
             throw new InvalidArgumentException(sprintf('tried to read unknown property "%s"', $property));
         }
-
-        $conf = $conf['byCase'][$property];
 
         if (!$conf['get']) {
             throw new InvalidArgumentException(sprintf('tried to read private/protected property "%s"', $property));
@@ -109,13 +108,11 @@ trait GetSetTrait
 
     public function __set(string $property, mixed $value): void
     {
-        $conf = loadConfiguration(static::class);
+        $conf = loadConfiguration(static::class)['getPropertyConf']($property);
 
-        if (!isset($conf['byCase'][$property])) {
+        if (!isset($conf)) {
             throw new InvalidArgumentException(sprintf('tried to set unknown property "%s"', $property));
         }
-
-        $conf = $conf['byCase'][$property];
 
         if (!$conf['set']) {
             throw new InvalidArgumentException(sprintf('tried to set private/protected property "%s"', $property));
@@ -134,13 +131,11 @@ trait GetSetTrait
 
     public function __isset(string $property): bool
     {
-        $conf = loadConfiguration(static::class);
+        $conf = loadConfiguration(static::class)['getPropertyConf']($property);
 
-        if (!isset($conf['byCase'][$property])) {
+        if (!isset($conf)) {
             throw new InvalidArgumentException(sprintf('tried to query unknown property "%s"', $property));
         }
-
-        $conf = $conf['byCase'][$property];
 
         if (!$conf['get']) {
             throw new InvalidArgumentException(sprintf('tried to query private/protected property "%s"', $property));
@@ -155,13 +150,11 @@ trait GetSetTrait
 
     public function __unset(string $property): void
     {
-        $conf = loadConfiguration(static::class);
+        $conf = loadConfiguration(static::class)['getPropertyConf']($property);
 
-        if (!isset($conf['byCase'][$property])) {
+        if (!isset($conf)) {
             throw new InvalidArgumentException(sprintf('tried to unset unknown property "%s"', $property));
         }
-
-        $conf = $conf['byCase'][$property];
 
         if (!$conf['unset']) {
             throw new InvalidArgumentException(sprintf('tried to unset private/protected property "%s"', $property));
@@ -182,13 +175,13 @@ function loadConfiguration(string $curClassName): array
 
     if (!isset($propertiesConf[$curClassName])) {
         $propertiesConf[$curClassName] = [
-            'byCase'  => [],
+            'byCase' => [],
             'byLCase' => []
         ];
 
         $parseAttributes = function (ReflectionClass|ReflectionProperty $reflection): array {
             $conf = [];
-            foreach (['get', 'set', 'unset', 'mutator'] as $f) {
+            foreach (['get', 'set', 'unset', 'mutator', 'ci'] as $f) {
                 $conf[$f] = [
                     'isset' => false,
                     'value' => null
@@ -232,6 +225,12 @@ function loadConfiguration(string $curClassName): array
                             ];
                         }
                         break;
+                    case CaseInsensitive::class:
+                        $conf['ci'] = [
+                            'isset' => true,
+                            'value' => true
+                        ];
+                        break;
                 }
             }
 
@@ -240,7 +239,7 @@ function loadConfiguration(string $curClassName): array
 
         $mergeAttributes = function (?array $parent, array $child): array {
             if (null !== $parent) {
-                foreach (['get', 'set', 'unset', 'mutator'] as $f) {
+                foreach (['get', 'set', 'unset', 'mutator', 'ci'] as $f) {
                     if (!$child[$f]['isset']) {
                         $child[$f] = $parent[$f];
                     }
@@ -266,7 +265,7 @@ function loadConfiguration(string $curClassName): array
 
         $reflectionClass = new ReflectionClass($curClassName);
 
-        // Parse all existing 'set*', 'get*', 'isset*' and 'unset*' methods
+        // Find all existing "set<Property>", "get<Property>", "isset<Property>" and "unset<Property>" methods
         $existingMethods = [];
         foreach ($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC) as $reflectionMethod) {
             /** @var $reflectionMethod ReflectionMethod */
@@ -318,6 +317,28 @@ function loadConfiguration(string $curClassName): array
             $propertiesConf[$curClassName]['byCase'][$property] = $propertyConf;
             $propertiesConf[$curClassName]['byLCase'][$lcaseProperty] = $property;
         }
+
+        // Create closure for retrieving property conf by property name.
+        // Case sensitivity setting is also taken in account.
+        $getFunc = function (string & $property) use ($propertiesConf, $curClassName): ?array {
+            return $propertiesConf[$curClassName]['byCase'][$property] ?? null;
+        };
+
+        if ($classesConf[$curClassName]['ci']['value']) {
+            $getFunc = function (string & $property) use ($getFunc, $propertiesConf, $curClassName): ?array {
+                $origPropertyName = $propertiesConf[$curClassName]['byLCase'][strtolower($property)] ?? null;
+
+                if (!isset($origPropertyName)) {
+                    return null;
+                }
+
+                $property = $origPropertyName;
+
+                return $getFunc($origPropertyName);
+            };
+        }
+
+        $propertiesConf[$curClassName]['getPropertyConf'] = $getFunc;
     }
 
     return $propertiesConf[$curClassName];

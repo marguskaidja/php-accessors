@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\GetSet\Tests;
 
-use margusk\GetSet\Attributes\{Get, Set};
+use margusk\GetSet\Attributes\{CaseInsensitive as CI, Get, Set};
 use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\Exceptions\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
@@ -50,7 +50,7 @@ class CombinedTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        $obj = new #[Get, Set] class {
+        $obj = new #[Get] class {
             use GetSetTrait;
 
             protected string $PropertY = 'some value';
@@ -72,5 +72,19 @@ class CombinedTest extends TestCase
         $obj->setPROPERTY('new value');
 
         $this->assertEquals('new value', $obj->getpRoPertY());
+    }
+
+    public function test_property_name_is_case_insensitive_when_accessing_in_direct_syntax()
+    {
+        $obj = new #[Get, Set, CI] class {
+            use GetSetTrait;
+
+            protected string $PropertY;
+        };
+
+        $value = 'some value';
+        $obj->proPerTy = $value;
+
+        $this->assertEquals($value, $obj->prOperTy);
     }
 }
