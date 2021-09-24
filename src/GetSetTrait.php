@@ -334,7 +334,7 @@ function loadConfiguration(string $curClassName): array
 
                 $property = $origPropertyName;
 
-                return $getFunc($origPropertyName);
+                return $getFunc($property);
             };
         }
 
