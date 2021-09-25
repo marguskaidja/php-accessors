@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\GetSet;
 
-use margusk\GetSet\Attributes\CaseInsensitive;
+use margusk\GetSet\Attributes\ICase;
 use margusk\GetSet\Attributes\Delete;
 use margusk\GetSet\Attributes\Get;
 use margusk\GetSet\Attributes\Set;
@@ -225,7 +225,7 @@ function loadConfiguration(string $curClassName): array
                             ];
                         }
                         break;
-                    case CaseInsensitive::class:
+                    case ICase::class:
                         $conf['ci'] = [
                             'isset' => true,
                             'value' => true

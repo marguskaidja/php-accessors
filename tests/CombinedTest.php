@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\GetSet\Tests;
 
-use margusk\GetSet\Attributes\{CaseInsensitive as CI, Get, Set};
+use margusk\GetSet\Attributes\{ICase as CI, Get, Set};
 use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\Exceptions\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;

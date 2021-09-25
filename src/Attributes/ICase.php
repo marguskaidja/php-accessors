@@ -15,7 +15,7 @@ namespace margusk\GetSet\Attributes;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_CLASS]
-class CaseInsensitive
+class ICase
 {
 
 }
