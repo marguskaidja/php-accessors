@@ -8,7 +8,10 @@ Due the fact that it's configuration is built upon [PHP attributes](https://www.
 
 ## Requirements
 
-Only requirement is **PHP 8**. No external library is needed.
+Only requirement is **PHP 8+**. No external library is needed for normal usage.
+
+For running the tests:
+* [PHPUnit](https://phpunit.de/) is required
 
 ## Installation
 
