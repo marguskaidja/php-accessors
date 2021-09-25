@@ -186,7 +186,7 @@ class A
 }
 
 $obj = new A();
-$obj->prop1 = 1024;
+$obj->prop1 = 1023;
 echo $obj->prop1; // Outputs "255"
 var_dump($opj->prop1Set); // Outputs "bool(true)"
 ```
