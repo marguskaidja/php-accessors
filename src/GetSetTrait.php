@@ -75,7 +75,7 @@ trait GetSetTrait
                     );
                 }
 
-                return $classConf['setImpl']($this, $property, array_shift($args), $propertyConf);
+                return $classConf['setImpl']->call($this, $property, array_shift($args), $propertyConf);
             // Get, Set or Isset
             } elseif (in_array($prefix, ['get', 'isset', 'unset'])) {
                 if (0 !== count($args)) {
@@ -138,7 +138,7 @@ trait GetSetTrait
             );
         }
 
-        $classConf['setImpl']($this, $property, $value, $propertyConf);
+        $classConf['setImpl']->call($this, $property, $value, $propertyConf);
     }
 
     public function __isset(string $property): bool

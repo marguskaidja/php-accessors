@@ -27,7 +27,7 @@ final class Core
             self::$propertiesConf[$curClassName] = [
                 'byCase'    => [],
                 'byLCase'   => [],
-                'setImpl'   => self::createSetImplementation($curClassName),
+                'setImpl'   => self::createSetImplementation(),
                 'unsetImpl' => self::createUnsetImplementation($curClassName),
                 'getImpl'   => self::createGetImplementation($curClassName),
                 'issetImpl' => self::createIssetImplementation($curClassName),
@@ -205,9 +205,9 @@ final class Core
         return self::$propertiesConf[$curClassName];
     }
 
-    protected static function createSetImplementation(string $curClassName): Closure
+    protected static function createSetImplementation(): Closure
     {
-        return (function (object $object, string $property, mixed $value, ?array $propertyConf) : object {
+        return (function (string $property, mixed $value, ?array $propertyConf) : object {
             if (!$propertyConf) {
                 throw new InvalidArgumentException(sprintf('tried to set unknown property "%s"', $property));
             }
@@ -217,7 +217,9 @@ final class Core
             }
 
             if ($propertyConf['immutable']) {
-                $object = clone $object;
+                $object = clone $this;
+            } else {
+                $object = $this;
             }
 
             if (!$propertyConf['immutable'] && isset($propertyConf['existingMethods']['set'])) {
@@ -231,7 +233,7 @@ final class Core
             }
 
             return $object;
-        })->bindTo(null, $curClassName);
+        });
     }
 
     protected static function createUnsetImplementation(string $curClassName): Closure
