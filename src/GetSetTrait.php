@@ -75,7 +75,12 @@ trait GetSetTrait
                     );
                 }
 
-                return $classConf['setImpl']->call($this, $property, array_shift($args), $propertyConf);
+                /** @var $setImplementation \Closure */
+                static $setImplementation = null;
+
+                Core::createSetImplementation($setImplementation, $this);
+
+                return $setImplementation($property, array_shift($args), $propertyConf);
             // Get, Set or Isset
             } elseif (in_array($prefix, ['get', 'isset', 'unset'])) {
                 if (0 !== count($args)) {
@@ -138,26 +143,20 @@ trait GetSetTrait
             );
         }
 
-        $classConf['setImpl']->call($this, $property, $value, $propertyConf);
+        /** @var $setImplementation \Closure */
+        static $setImplementation = null;
+
+        Core::createSetImplementation($setImplementation, $this);
+
+        $setImplementation($property, $value, $propertyConf);
     }
 
     public function __isset(string $property): bool
     {
-        $conf = Core::loadConfiguration(static::class)['getPropertyConf']($property);
+        $classConf = Core::loadConfiguration(static::class);
+        $propertyConf = $classConf['getPropertyConf']($property);
 
-        if (!isset($conf)) {
-            throw new InvalidArgumentException(sprintf('tried to query unknown property "%s"', $property));
-        }
-
-        if (!$conf['get']) {
-            throw new InvalidArgumentException(sprintf('tried to query private/protected property "%s"', $property));
-        }
-
-        if (isset($conf['existingMethods']['isset'])) {
-            return $this->{$conf['existingMethods']['isset']}();
-        }
-
-        return isset($this->{$property});
+        return $classConf['issetImpl']($this, $property, $propertyConf);
     }
 
     public function __unset(string $property): void

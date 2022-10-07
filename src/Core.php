@@ -27,7 +27,6 @@ final class Core
             self::$propertiesConf[$curClassName] = [
                 'byCase'    => [],
                 'byLCase'   => [],
-                'setImpl'   => self::createSetImplementation(),
                 'unsetImpl' => self::createUnsetImplementation($curClassName),
                 'getImpl'   => self::createGetImplementation($curClassName),
                 'issetImpl' => self::createIssetImplementation($curClassName),
@@ -205,35 +204,41 @@ final class Core
         return self::$propertiesConf[$curClassName];
     }
 
-    protected static function createSetImplementation(): Closure
+    public static function createSetImplementation(& $saveClosureIntoVar, object $closureCtx): Closure
     {
-        return (function (string $property, mixed $value, ?array $propertyConf) : object {
-            if (!$propertyConf) {
-                throw new InvalidArgumentException(sprintf('tried to set unknown property "%s"', $property));
-            }
-
-            if (!$propertyConf['set']) {
-                throw new InvalidArgumentException(sprintf('tried to set private/protected property "%s" (missing #[Set] attribute?)', $property));
-            }
-
-            if ($propertyConf['immutable']) {
-                $object = clone $this;
-            } else {
-                $object = $this;
-            }
-
-            if (!$propertyConf['immutable'] && isset($propertyConf['existingMethods']['set'])) {
-                $object->{$propertyConf['existingMethods']['set']}($value);
-            } else {
-                if (null !== $propertyConf['mutator']) {
-                    $value = call_user_func($propertyConf['mutator'], $value);
+        if (null === $saveClosureIntoVar) {
+            $saveClosureIntoVar = (function (string $property, mixed $value, ?array $propertyConf): object {
+                if (!$propertyConf) {
+                    throw new InvalidArgumentException(sprintf('tried to set unknown property "%s"', $property));
                 }
 
-                $object->{$property} = $value;
-            }
+                if (!$propertyConf['set']) {
+                    throw new InvalidArgumentException(
+                        sprintf('tried to set private/protected property "%s" (missing #[Set] attribute?)', $property)
+                    );
+                }
 
-            return $object;
-        });
+                if ($propertyConf['immutable']) {
+                    $object = clone $this;
+                } else {
+                    $object = $this;
+                }
+
+                if (!$propertyConf['immutable'] && isset($propertyConf['existingMethods']['set'])) {
+                    $object->{$propertyConf['existingMethods']['set']}($value);
+                } else {
+                    if (null !== $propertyConf['mutator']) {
+                        $value = call_user_func($propertyConf['mutator'], $value);
+                    }
+
+                    $object->{$property} = $value;
+                }
+
+                return $object;
+            })->bindTo($closureCtx, $closureCtx);
+        }
+
+        return $saveClosureIntoVar;
     }
 
     protected static function createUnsetImplementation(string $curClassName): Closure
@@ -291,8 +296,8 @@ final class Core
                 throw new InvalidArgumentException(sprintf('tried to query private/protected property "%s"', $property));
             }
 
-            if (isset($conf['existingMethods']['isset'])) {
-                return $object->{$propertyConf['existingMethods']['isset']}();
+            if (isset($propertyConf['existingMethods']['isset'])) {
+                return (bool)$object->{$propertyConf['existingMethods']['isset']}();
             }
 
             return isset($object->{$property});
