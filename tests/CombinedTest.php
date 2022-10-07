@@ -16,7 +16,6 @@ use margusk\GetSet\Attributes\{ICase as CI, Get, Set};
 use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\Exceptions\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
-use PHPUnit\Framework\TestCase;
 
 class CombinedTest extends TestCase
 {

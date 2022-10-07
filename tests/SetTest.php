@@ -15,7 +15,6 @@ namespace margusk\GetSet\Tests;
 use margusk\GetSet\Attributes\Set;
 use margusk\GetSet\Exceptions\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
-use PHPUnit\Framework\TestCase;
 
 class SetTest extends TestCase
 {
@@ -161,8 +160,6 @@ class SetTest extends TestCase
 
     public function test_set_should_fail_with_protected_value()
     {
-        $this->expectException(InvalidArgumentException::class);
-
         $obj = new #[Set(true)] class {
             use GetSetTrait;
 
@@ -172,7 +169,38 @@ class SetTest extends TestCase
             protected string $p2;
         };
 
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set private/protected property|');
+
         $obj->p2 = 'this must fail';
+    }
+
+    public function test_set_should_fail_with_unknown_property_through_direct_assignment()
+    {
+        $obj = new #[Set] class {
+            use GetSetTrait;
+
+            protected string $p1 = 'this is protected value';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set unknown property|');
+
+        $obj->p2 = 'new value';
+    }
+
+    public function test_set_should_fail_with_unknown_property_using_method_call()
+    {
+        $obj = new #[Set] class {
+            use GetSetTrait;
+
+            protected string $p1 = 'this is protected value';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set unknown property|');
+
+        $obj->setP2('new value');
     }
 
     public function test_attributes_must_be_inherited_from_parent_class()
