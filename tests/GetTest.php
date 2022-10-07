@@ -30,6 +30,7 @@ class GetTest extends TestCase
         $this->assertEquals('this is protected value', $obj->p1);
         $this->assertEquals('this is protected value', $obj->p1());
         $this->assertEquals('this is protected value', $obj->getP1());
+        $this->assertEquals('this is protected value', $obj->get('p1'));
     }
 
     public function test_get_should_return_correct_value_with_class_attribute()
@@ -43,6 +44,7 @@ class GetTest extends TestCase
         $this->assertEquals('this is protected value', $obj->p1);
         $this->assertEquals('this is protected value', $obj->p1());
         $this->assertEquals('this is protected value', $obj->getP1());
+        $this->assertEquals('this is protected value', $obj->get('p1'));
     }
 
     public function test_get_should_return_correct_value_with_property_attribute_override()
@@ -57,6 +59,7 @@ class GetTest extends TestCase
         $this->assertEquals('this is protected value', $obj->p1);
         $this->assertEquals('this is protected value', $obj->p1());
         $this->assertEquals('this is protected value', $obj->getP1());
+        $this->assertEquals('this is protected value', $obj->get('p1'));
     }
 
     public function test_get_should_fail_with_protected_property()

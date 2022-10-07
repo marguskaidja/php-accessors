@@ -13,49 +13,37 @@ declare(strict_types=1);
 namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\{ICase as CI, Get, Set};
-use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\Exceptions\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
 
 class CombinedTest extends TestCase
 {
-    public function test_unknown_property_should_throw_InvalidArgumentException()
+    public function test_direct_access_with_case_sensitivity_and_no_match_must_fail()
     {
-        $this->expectException(InvalidArgumentException::class);
-
-        $obj = new #[Get, Set] class {
-            use GetSetTrait;
-
-            protected string $p1 = 'initial value';
-        };
-
-        $obj->getP2();
-    }
-
-    public function test_unknown_property_method_should_throw_BadMethodCallException()
-    {
-        $this->expectException(BadMethodCallException::class);
-
-        $obj = new #[Get, Set] class {
-            use GetSetTrait;
-
-            protected string $p1 = 'initial value';
-        };
-
-        $obj->P2();
-    }
-
-    public function test_property_name_is_case_sensitive_when_accessing_in_direct_syntax()
-    {
-        $this->expectException(InvalidArgumentException::class);
-
         $obj = new #[Get] class {
             use GetSetTrait;
 
             protected string $PropertY = 'some value';
         };
 
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/tried to read unknown property/');
+
         $obj->propertY;
+    }
+
+    public function test_flexible_method_call_access_with_case_sensitivity_and_no_match_must_fail()
+    {
+        $obj = new #[Get] class {
+            use GetSetTrait;
+
+            protected string $PropertY = 'some value';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/tried to read unknown property/');
+
+        $obj->get('PROPerty');
     }
 
     public function test_property_name_is_case_insensitive_when_accessing_in_method_syntax()
