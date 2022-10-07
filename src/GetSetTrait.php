@@ -56,14 +56,20 @@ trait GetSetTrait
         if (null !== $prefix) {
             if ('' === $property) {
                 $property = (string)array_shift($args);
+                // If property name is read as first argument to current method, then
+                // case sensitivity/insensitivity is determined by usage of #[ICase] attribute
+                $getPropertyConfFunc = $classConf['getPropertyConf'];
+            } else {
+                // If property name is the suffix in current method name, then it's always
+                // interpreted case insensitive
+                $getPropertyConfFunc = $classConf['getPropertyConfICase'];
             }
 
             if ('' === $property) {
                 throw new InvalidArgumentException('missing first argument (property name) to method %s()', $method);
             }
 
-            $property = $classConf['byLCase'][strtolower($property)] ?? $property;
-            $propertyConf = $classConf['byCase'][$property] ?? null;
+            $propertyConf = $getPropertyConfFunc($property);
             $immutable = $propertyConf['immutable'] ?? false;
 
             // Call Set/With

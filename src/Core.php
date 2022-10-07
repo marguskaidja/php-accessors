@@ -25,24 +25,23 @@ use ReflectionMethod;
 
 final class Core
 {
-    private static array $classesConf = [];
-
     private static array $propertiesConf = [];
 
     public static function loadConfiguration(string $curClassName): array
     {
         if (!isset(self::$propertiesConf[$curClassName])) {
             self::$propertiesConf[$curClassName] = [
-                'byCase'    => [],
-                'byLCase'   => [],
-                'unsetImpl' => self::createUnsetImplementation($curClassName),
-                'getImpl'   => self::createGetImplementation($curClassName),
-                'issetImpl' => self::createIssetImplementation($curClassName),
+                'attributes'    => null,
+                'byCase'        => [],
+                'byLCase'       => [],
+                'unsetImpl'     => self::createUnsetImplementation($curClassName),
+                'getImpl'       => self::createGetImplementation($curClassName),
+                'issetImpl'     => self::createIssetImplementation($curClassName),
             ];
 
             $parseAttributes = function (ReflectionClass|ReflectionProperty $reflection): array {
                 $conf = [];
-                foreach (['get', 'set', 'unset', 'mutator', 'ci', 'immutable'] as $f) {
+                foreach (['get', 'set', 'unset', 'mutator', 'icase', 'immutable'] as $f) {
                     $conf[$f] = [
                         'isset' => false,
                         'value' => null
@@ -87,7 +86,7 @@ final class Core
                             }
                             break;
                         case ICase::class:
-                            $conf['ci'] = [
+                            $conf['icase'] = [
                                 'isset' => true,
                                 'value' => true
                             ];
@@ -106,7 +105,7 @@ final class Core
 
             $mergeAttributes = function (?array $parent, array $child): array {
                 if (null !== $parent) {
-                    foreach (['get', 'set', 'unset', 'mutator', 'ci' ,'immutable'] as $f) {
+                    foreach (['get', 'set', 'unset', 'mutator', 'icase' ,'immutable'] as $f) {
                         if (!$child[$f]['isset']) {
                             $child[$f] = $parent[$f];
                         }
@@ -120,13 +119,13 @@ final class Core
             $mergedClassAttr = null;
 
             foreach ($classNames as $className) {
-                if (!isset(self::$classesConf[$className])) {
+                if (!isset(self::$propertiesConf[$className]['attributes'])) {
                     $classAttr = $parseAttributes(new ReflectionClass($className));
 
                     $mergedClassAttr = $mergeAttributes($mergedClassAttr, $classAttr);
-                    self::$classesConf[$className] = $mergedClassAttr;
+                    self::$propertiesConf[$className]['attributes'] = $mergedClassAttr;
                 } else {
-                    $mergedClassAttr = self::$classesConf[$className];
+                    $mergedClassAttr = self::$propertiesConf[$className]['attributes'];
                 }
             }
 
@@ -150,7 +149,7 @@ final class Core
                 $lcaseProperty = strtolower($property);
 
                 $propertyConfRaw = $mergeAttributes(
-                    self::$classesConf[$curClassName],
+                    self::$propertiesConf[$curClassName]['attributes'],
                     $parseAttributes($reflectionProperty)
                 );
 
@@ -192,21 +191,24 @@ final class Core
                 return self::$propertiesConf[$curClassName]['byCase'][$property] ?? null;
             };
 
-            if (self::$classesConf[$curClassName]['ci']['value']) {
-                $getFunc = function (string & $property) use ($getFunc, $curClassName): ?array {
-                    $origPropertyName = self::$propertiesConf[$curClassName]['byLCase'][strtolower($property)] ?? null;
+            $getFuncICase = function (string & $property) use ($getFunc, $curClassName): ?array {
+                $origPropertyName = self::$propertiesConf[$curClassName]['byLCase'][strtolower($property)] ?? null;
 
-                    if (!isset($origPropertyName)) {
-                        return null;
-                    }
+                if (!isset($origPropertyName)) {
+                    return null;
+                }
 
-                    $property = $origPropertyName;
+                $property = $origPropertyName;
 
-                    return $getFunc($property);
-                };
+                return $getFunc($property);
+            };
+
+            if (self::$propertiesConf[$curClassName]['attributes']['icase']['value']) {
+                $getFunc = $getFuncICase;
             }
 
             self::$propertiesConf[$curClassName]['getPropertyConf'] = $getFunc;
+            self::$propertiesConf[$curClassName]['getPropertyConfICase'] = $getFuncICase;
         }
 
         return self::$propertiesConf[$curClassName];
