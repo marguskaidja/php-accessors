@@ -13,7 +13,7 @@ declare(strict_types=1);
 namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\{ICase as CI, Get, Set};
-use margusk\GetSet\Exceptions\InvalidArgumentException;
+use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\GetSetTrait;
 
 class CombinedTest extends TestCase
@@ -26,7 +26,7 @@ class CombinedTest extends TestCase
             protected string $PropertY = 'some value';
         };
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/tried to read unknown property/');
 
         $obj->propertY;
@@ -40,7 +40,7 @@ class CombinedTest extends TestCase
             protected string $PropertY = 'some value';
         };
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/tried to read unknown property/');
 
         $obj->get('PROPerty');

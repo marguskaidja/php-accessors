@@ -81,12 +81,7 @@ trait GetSetTrait
                     );
                 }
 
-                /** @var $setImplementation \Closure */
-                static $setImplementation = null;
-
-                Core::createSetImplementation($setImplementation, $this);
-
-                return $setImplementation($property, array_shift($args), $propertyConf);
+                return $classConf['setImpl']($this, $property, array_shift($args), $propertyConf);
             // Get, Set or Isset
             } elseif (in_array($prefix, ['get', 'isset', 'unset'])) {
                 if (0 !== count($args)) {
@@ -149,12 +144,7 @@ trait GetSetTrait
             );
         }
 
-        /** @var $setImplementation \Closure */
-        static $setImplementation = null;
-
-        Core::createSetImplementation($setImplementation, $this);
-
-        $setImplementation($property, $value, $propertyConf);
+        $classConf['setImpl']($this, $property, $value, $propertyConf);
     }
 
     public function __isset(string $property): bool

@@ -13,7 +13,7 @@ declare(strict_types=1);
 namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\Get;
-use margusk\GetSet\Exceptions\InvalidArgumentException;
+use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\GetSetTrait;
 
 class GetTest extends TestCase
@@ -73,7 +73,7 @@ class GetTest extends TestCase
             protected string $p2 = 'this is another protected value';
         };
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('|tried to read private/protected property|');
 
         $obj->getP2();
@@ -87,7 +87,7 @@ class GetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('|tried to read unknown property|');
 
         $obj->p2;
@@ -101,7 +101,7 @@ class GetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('|tried to read unknown property|');
 
         $obj->getP2();

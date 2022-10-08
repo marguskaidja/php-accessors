@@ -37,7 +37,8 @@ class UnsetTest extends TestCase
 
     public function test_unset_langconstruct_should_fail_protected_property()
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('|tried to unset private/protected property|');
 
         $obj = new class {
             use GetSetTrait;
@@ -64,7 +65,8 @@ class UnsetTest extends TestCase
 
     public function test_unset_method_should_fail_protected_property()
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('|tried to unset private/protected property|');
 
         $obj = new class {
             use GetSetTrait;

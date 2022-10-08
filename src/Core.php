@@ -18,7 +18,7 @@ use margusk\GetSet\Attributes\Get;
 use margusk\GetSet\Attributes\ICase;
 use margusk\GetSet\Attributes\Immutable;
 use margusk\GetSet\Attributes\Set;
-use margusk\GetSet\Exceptions\InvalidArgumentException;
+use margusk\GetSet\Exceptions\BadMethodCallException;
 use ReflectionClass;
 use ReflectionProperty;
 use ReflectionMethod;
@@ -34,8 +34,9 @@ final class Core
                 'attributes'    => null,
                 'byCase'        => [],
                 'byLCase'       => [],
-                'unsetImpl'     => self::createUnsetImplementation($curClassName),
                 'getImpl'       => self::createGetImplementation($curClassName),
+                'setImpl'       => self::createSetImplementation($curClassName),
+                'unsetImpl'     => self::createUnsetImplementation($curClassName),
                 'issetImpl'     => self::createIssetImplementation($curClassName),
             ];
 
@@ -174,10 +175,15 @@ final class Core
                 // property name. This is useful only when specifying mutator through class attributes.
                 if (is_string($propertyConf['mutator'])) {
                     $propertyConf['mutator'] = str_replace('%property%', $property, $propertyConf['mutator']);
-                    $splits = explode('::', $propertyConf['mutator'], 2);
 
-                    if (2 === count($splits)) {
-                        $propertyConf['mutator'] = $splits;
+                    if (preg_match("/^(?:\\$)?this->(.+)/", $propertyConf['mutator'], $matches)) {
+                        $propertyConf['mutator'] = [null, $matches[1]];
+                    } else {
+                        $splits = explode('::', $propertyConf['mutator'], 2);
+
+                        if (2 === count($splits)) {
+                            $propertyConf['mutator'] = $splits;
+                        }
                     }
                 }
 
@@ -214,52 +220,51 @@ final class Core
         return self::$propertiesConf[$curClassName];
     }
 
-    public static function createSetImplementation(& $saveClosureIntoVar, object $closureCtx): Closure
+    private static function createSetImplementation(string $curClassName): Closure
     {
-        if (null === $saveClosureIntoVar) {
-            $saveClosureIntoVar = (function (string $property, mixed $value, ?array $propertyConf): object {
-                if (!$propertyConf) {
-                    throw new InvalidArgumentException(sprintf('tried to set unknown property "%s"', $property));
-                }
+        return (function (object $object, string $property, mixed $value, ?array $propertyConf): object {
+            if (!$propertyConf) {
+                throw new BadMethodCallException(sprintf('tried to set unknown property "%s"', $property));
+            }
 
-                if (!$propertyConf['set']) {
-                    throw new InvalidArgumentException(
-                        sprintf('tried to set private/protected property "%s" (missing #[Set] attribute?)', $property)
-                    );
-                }
+            if (!$propertyConf['set']) {
+                throw new BadMethodCallException(
+                    sprintf('tried to set private/protected property "%s" (missing #[Set] attribute?)', $property)
+                );
+            }
 
-                if ($propertyConf['immutable']) {
-                    $object = clone $this;
-                } else {
-                    $object = $this;
-                }
+            if ($propertyConf['immutable']) {
+                $object = clone $object;
+            }
 
-                if (!$propertyConf['immutable'] && isset($propertyConf['existingMethods']['set'])) {
-                    $object->{$propertyConf['existingMethods']['set']}($value);
-                } else {
-                    if (null !== $propertyConf['mutator']) {
-                        $value = call_user_func($propertyConf['mutator'], $value);
+            if (!$propertyConf['immutable'] && isset($propertyConf['existingMethods']['set'])) {
+                $object->{$propertyConf['existingMethods']['set']}($value);
+            } else {
+                $mutator = $propertyConf['mutator'];
+                if (null !== $mutator) {
+                    if (null === $mutator[0]) {
+                        $mutator[0] = $object;
                     }
 
-                    $object->{$property} = $value;
+                    $value = call_user_func($mutator, $value);
                 }
 
-                return $object;
-            })->bindTo($closureCtx, $closureCtx);
-        }
+                $object->{$property} = $value;
+            }
 
-        return $saveClosureIntoVar;
+            return $object;
+        })->bindTo(null, $curClassName);
     }
 
-    protected static function createUnsetImplementation(string $curClassName): Closure
+    private static function createUnsetImplementation(string $curClassName): Closure
     {
         return (function (object $object, string $property, ?array $propertyConf) : object {
             if (!$propertyConf) {
-                throw new InvalidArgumentException(sprintf('tried to unset unknown property "%s"', $property));
+                throw new BadMethodCallException(sprintf('tried to unset unknown property "%s"', $property));
             }
 
             if (!$propertyConf['unset']) {
-                throw new InvalidArgumentException(sprintf('tried to unset private/protected property "%s" (missing #[Delete] attribute?)', $property));
+                throw new BadMethodCallException(sprintf('tried to unset private/protected property "%s" (missing #[Delete] attribute?)', $property));
             }
 
             if ($propertyConf['immutable']) {
@@ -276,15 +281,15 @@ final class Core
         })->bindTo(null, $curClassName);
     }
 
-    protected static function createGetImplementation(string $curClassName): Closure
+    private static function createGetImplementation(string $curClassName): Closure
     {
         return (function (object $object, string $property, ?array $propertyConf) : mixed {
             if (!isset($propertyConf)) {
-                throw new InvalidArgumentException(sprintf('tried to read unknown property "%s"', $property));
+                throw new BadMethodCallException(sprintf('tried to read unknown property "%s"', $property));
             }
 
             if (!$propertyConf['get']) {
-                throw new InvalidArgumentException(sprintf('tried to read private/protected property "%s"', $property));
+                throw new BadMethodCallException(sprintf('tried to read private/protected property "%s"', $property));
             }
 
             if (isset($propertyConf['existingMethods']['get'])) {
@@ -295,15 +300,15 @@ final class Core
         })->bindTo(null, $curClassName);
     }
 
-    protected static function createIssetImplementation(string $curClassName): Closure
+    private static function createIssetImplementation(string $curClassName): Closure
     {
         return (function (object $object, string $property, ?array $propertyConf) : bool {
             if (!isset($propertyConf)) {
-                throw new InvalidArgumentException(sprintf('tried to query unknown property "%s"', $property));
+                throw new BadMethodCallException(sprintf('tried to query unknown property "%s"', $property));
             }
 
             if (!$propertyConf['get']) {
-                throw new InvalidArgumentException(sprintf('tried to query private/protected property "%s"', $property));
+                throw new BadMethodCallException(sprintf('tried to query private/protected property "%s"', $property));
             }
 
             if (isset($propertyConf['existingMethods']['isset'])) {

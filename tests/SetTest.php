@@ -13,7 +13,7 @@ declare(strict_types=1);
 namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\Set;
-use margusk\GetSet\Exceptions\InvalidArgumentException;
+use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\GetSetTrait;
 
 class SetTest extends TestCase
@@ -116,9 +116,32 @@ class SetTest extends TestCase
         $this->assertEquals(htmlspecialchars($value), $obj->getP1Value());
     }
 
-    public function test_mutator_in_class_attribute_and_propertyname_substitution()
+    public function test_static_mutator_in_class_attribute_and_propertyname_substitution()
     {
         $obj = new #[Set(true, "self::mutate%property%")] class {
+            use GetSetTrait;
+
+            protected string $p1;
+
+            public static function mutateP1($value)
+            {
+                return htmlspecialchars($value);
+            }
+
+            public function getP1Value()
+            {
+                return $this->p1;
+            }
+        };
+
+        $value = '<b>GetSet</b>';
+        $obj->p1 = $value;
+        $this->assertEquals($obj->mutateP1($value), $obj->getP1Value());
+    }
+
+    public function test_object_mutator_in_class_attribute_and_propertyname_substitution()
+    {
+        $obj = new #[Set(true, "this->mutate%property%")] class {
             use GetSetTrait;
 
             protected string $p1;
@@ -169,7 +192,7 @@ class SetTest extends TestCase
             protected string $p2;
         };
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('|tried to set private/protected property|');
 
         $obj->p2 = 'this must fail';
@@ -183,7 +206,7 @@ class SetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('|tried to set unknown property|');
 
         $obj->p2 = 'new value';
@@ -197,7 +220,7 @@ class SetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('|tried to set unknown property|');
 
         $obj->setP2('new value');
