@@ -13,9 +13,8 @@ declare(strict_types=1);
 namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\Get;
-use margusk\GetSet\Exceptions\InvalidArgumentException;
+use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\GetSetTrait;
-use PHPUnit\Framework\TestCase;
 
 class GetTest extends TestCase
 {
@@ -31,6 +30,7 @@ class GetTest extends TestCase
         $this->assertEquals('this is protected value', $obj->p1);
         $this->assertEquals('this is protected value', $obj->p1());
         $this->assertEquals('this is protected value', $obj->getP1());
+        $this->assertEquals('this is protected value', $obj->get('p1'));
     }
 
     public function test_get_should_return_correct_value_with_class_attribute()
@@ -44,6 +44,7 @@ class GetTest extends TestCase
         $this->assertEquals('this is protected value', $obj->p1);
         $this->assertEquals('this is protected value', $obj->p1());
         $this->assertEquals('this is protected value', $obj->getP1());
+        $this->assertEquals('this is protected value', $obj->get('p1'));
     }
 
     public function test_get_should_return_correct_value_with_property_attribute_override()
@@ -58,12 +59,11 @@ class GetTest extends TestCase
         $this->assertEquals('this is protected value', $obj->p1);
         $this->assertEquals('this is protected value', $obj->p1());
         $this->assertEquals('this is protected value', $obj->getP1());
+        $this->assertEquals('this is protected value', $obj->get('p1'));
     }
 
-    public function test_get_should_fail_with_protected_value()
+    public function test_get_should_fail_with_protected_property()
     {
-        $this->expectException(InvalidArgumentException::class);
-
         $obj = new #[Get(true)] class {
             use GetSetTrait;
 
@@ -72,6 +72,37 @@ class GetTest extends TestCase
             #[Get(false)]
             protected string $p2 = 'this is another protected value';
         };
+
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('|tried to read private/protected property|');
+
+        $obj->getP2();
+    }
+
+    public function test_get_should_fail_with_unknown_property_using_direct_access()
+    {
+        $obj = new #[Get] class {
+            use GetSetTrait;
+
+            protected string $p1 = 'this is protected value';
+        };
+
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('|tried to read unknown property|');
+
+        $obj->p2;
+    }
+
+    public function test_get_should_fail_with_unknown_property_using_method_call()
+    {
+        $obj = new #[Get] class {
+            use GetSetTrait;
+
+            protected string $p1 = 'this is protected value';
+        };
+
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('|tried to read unknown property|');
 
         $obj->getP2();
     }

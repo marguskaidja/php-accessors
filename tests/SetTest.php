@@ -13,9 +13,8 @@ declare(strict_types=1);
 namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\Set;
-use margusk\GetSet\Exceptions\InvalidArgumentException;
+use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\GetSetTrait;
-use PHPUnit\Framework\TestCase;
 
 class SetTest extends TestCase
 {
@@ -117,9 +116,32 @@ class SetTest extends TestCase
         $this->assertEquals(htmlspecialchars($value), $obj->getP1Value());
     }
 
-    public function test_mutator_in_class_attribute_and_propertyname_substitution()
+    public function test_static_mutator_in_class_attribute_and_propertyname_substitution()
     {
         $obj = new #[Set(true, "self::mutate%property%")] class {
+            use GetSetTrait;
+
+            protected string $p1;
+
+            public static function mutateP1($value)
+            {
+                return htmlspecialchars($value);
+            }
+
+            public function getP1Value()
+            {
+                return $this->p1;
+            }
+        };
+
+        $value = '<b>GetSet</b>';
+        $obj->p1 = $value;
+        $this->assertEquals($obj->mutateP1($value), $obj->getP1Value());
+    }
+
+    public function test_object_mutator_in_class_attribute_and_propertyname_substitution()
+    {
+        $obj = new #[Set(true, "this->mutate%property%")] class {
             use GetSetTrait;
 
             protected string $p1;
@@ -161,8 +183,6 @@ class SetTest extends TestCase
 
     public function test_set_should_fail_with_protected_value()
     {
-        $this->expectException(InvalidArgumentException::class);
-
         $obj = new #[Set(true)] class {
             use GetSetTrait;
 
@@ -172,7 +192,38 @@ class SetTest extends TestCase
             protected string $p2;
         };
 
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('|tried to set private/protected property|');
+
         $obj->p2 = 'this must fail';
+    }
+
+    public function test_set_should_fail_with_unknown_property_through_direct_assignment()
+    {
+        $obj = new #[Set] class {
+            use GetSetTrait;
+
+            protected string $p1 = 'this is protected value';
+        };
+
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('|tried to set unknown property|');
+
+        $obj->p2 = 'new value';
+    }
+
+    public function test_set_should_fail_with_unknown_property_using_method_call()
+    {
+        $obj = new #[Set] class {
+            use GetSetTrait;
+
+            protected string $p1 = 'this is protected value';
+        };
+
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('|tried to set unknown property|');
+
+        $obj->setP2('new value');
     }
 
     public function test_attributes_must_be_inherited_from_parent_class()

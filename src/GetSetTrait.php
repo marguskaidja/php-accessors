@@ -12,334 +12,167 @@ declare(strict_types=1);
 
 namespace margusk\GetSet;
 
-use margusk\GetSet\Attributes\ICase;
-use margusk\GetSet\Attributes\Delete;
-use margusk\GetSet\Attributes\Get;
-use margusk\GetSet\Attributes\Set;
 use margusk\GetSet\Exceptions\BadMethodCallException;
 use margusk\GetSet\Exceptions\InvalidArgumentException;
-use ReflectionClass;
-use ReflectionMethod;
-use ReflectionProperty;
 
 trait GetSetTrait
 {
     public function __call(string $method, array $args): mixed
     {
-        $conf = loadConfiguration(static::class);
+        $classConf = Core::loadConfiguration(static::class);
 
         $lcaseMethod = strtolower($method);
         $prefix = substr($lcaseMethod, 0, 3);
 
-        // Detect between "set<Property>", "get<Property>", "isset<Property>" or "unset<Property>" calls.
+        // Check if magic method is one of the followings:
+        //      set<Property>
+        //      with<Property>
+        //      get<Property>
+        //      isset<Property>
+        //      unset<Property>"
         if ('set' !== $prefix
             && 'get' !== $prefix
+            && 'with' !== ($prefix = substr($lcaseMethod, 0, 4))
             && !in_array(($prefix = substr($lcaseMethod, 0, 5)), ['unset', 'isset'])
         ) {
             $prefix = null;
         }
 
+        $nArgs = count($args);
         $property = substr($method, strlen((string)$prefix));
-        $lcaseProperty = strtolower($property);
 
         // If not one of the explicit calls above, then check if whole method name is property name like
         //  $obj->somePropertyName('somevalue')
-        if (null === $prefix && isset($conf['byLCase'][$lcaseProperty])) {
+        if (null === $prefix && isset($classConf['byLCase'][strtolower($property)])) {
             // If there are zero arguments, then interpret the call as Getter
             // If there are arguments, then it's Setter
-            if (count($args) > 0) {
-                $prefix = 's';
+            if ($nArgs > 0) {
+                $prefix = 'set';
             } else {
-                $prefix = 'g';
+                $prefix = 'get';
             }
         }
 
         if (null !== $prefix) {
-            $property = $conf['byLCase'][strtolower($property)] ?? $property;
-
-            // Call Setter
-            if ('s' === $prefix[0]) {
-                if (1 !== count($args)) {
-                    throw new BadMethodCallException('expecting 1 argument to method %s', $method);
-                }
-                $this->__set($property, $args[0]);
-                return $this;
-                // Getter, Setter, Isset
+            if ('' === $property) {
+                $property = (string)array_shift($args);
+                // If property name is read as first argument to current method, then
+                // case sensitivity/insensitivity is determined by usage of #[ICase] attribute
+                $getPropertyConfFunc = $classConf['getPropertyConf'];
             } else {
+                // If property name is the suffix in current method name, then it's always
+                // interpreted case insensitive
+                $getPropertyConfFunc = $classConf['getPropertyConfICase'];
+            }
+
+            if ('' === $property) {
+                throw new InvalidArgumentException('missing first argument (property name) to method %s()', $method);
+            }
+
+            $propertyConf = $getPropertyConfFunc($property);
+            $immutable = $propertyConf['immutable'] ?? false;
+
+            // Call Set/With
+            if ((!$immutable && 'set' === $prefix) || ($immutable && 'with' === $prefix)) {
+                // Check if exactly 1 argument is left in args stack
+                if (1 !== count($args)) {
+                    throw new InvalidArgumentException(
+                        sprintf('expecting exactly %u argument(s) to method %s()', $nArgs - count($args) + 1, $method)
+                    );
+                }
+
+                return $classConf['setImpl']($this, $property, array_shift($args), $propertyConf);
+            // Get, Set or Isset
+            } elseif (in_array($prefix, ['get', 'isset', 'unset'])) {
                 if (0 !== count($args)) {
-                    throw new BadMethodCallException('no arguments expected to method %s', $method);
+                    throw new InvalidArgumentException(
+                        sprintf('expecting exactly %u argument(s) to method %s()', $nArgs - count($args), $method)
+                    );
                 }
 
-                // Call Getter
-                if ('g' === $prefix[0]) {
-                    return $this->__get($property);
-                    // Call Isset
-                } elseif ('i' === $prefix[0]) {
-                    return $this->__isset($property);
-                }
-
-                // Call Unsetter
-                $this->__unset($property);
-                return $this;
+                return $classConf[$prefix . 'Impl']($this, $property, $propertyConf);
             }
         }
 
-        throw new BadMethodCallException(sprintf('unknown method %s', $method));
+        if ('with' === $prefix) {
+            throw new BadMethodCallException(
+                sprintf(
+                    'method %s() is available only for immutable properties (use %s::set%s() instead)',
+                    $method,
+                    static::class,
+                    ucfirst($property)
+                )
+            );
+        } elseif ('set' === $prefix) {
+            throw new BadMethodCallException(
+                sprintf(
+                    'method %s() is available only for mutable properties (use %s::with%s() instead)',
+                    $method,
+                    static::class,
+                    ucfirst($property)
+                )
+            );
+        } else {
+            throw new BadMethodCallException(
+                sprintf('unknown method %s()', $method)
+            );
+        }
     }
 
     public function __get(string $property): mixed
     {
-        $conf = loadConfiguration(static::class)['getPropertyConf']($property);
+        $classConf = Core::loadConfiguration(static::class);
+        $propertyConf = $classConf['getPropertyConf']($property);
 
-        if (!isset($conf)) {
-            throw new InvalidArgumentException(sprintf('tried to read unknown property "%s"', $property));
-        }
-
-        if (!$conf['get']) {
-            throw new InvalidArgumentException(sprintf('tried to read private/protected property "%s"', $property));
-        }
-
-        if (isset($conf['existingMethods']['get'])) {
-            return $this->{$conf['existingMethods']['get']}();
-        }
-
-        return $this->{$property};
+        return $classConf['getImpl']($this, $property, $propertyConf);
     }
 
     public function __set(string $property, mixed $value): void
     {
-        $conf = loadConfiguration(static::class)['getPropertyConf']($property);
+        $classConf = Core::loadConfiguration(static::class);
+        $propertyConf = $classConf['getPropertyConf']($property);
+        $immutable = $propertyConf['immutable'] ?? false;
 
-        if (!isset($conf)) {
-            throw new InvalidArgumentException(sprintf('tried to set unknown property "%s"', $property));
+        if ($immutable) {
+            throw new BadMethodCallException(
+                sprintf(
+                    'immutable property "%s" can\'t be set using assignment operator (use %s::with%s() instead)',
+                    $property,
+                    static::class,
+                    ucfirst($property)
+                )
+            );
         }
 
-        if (!$conf['set']) {
-            throw new InvalidArgumentException(sprintf('tried to set private/protected property "%s"', $property));
-        }
-
-        if (isset($conf['existingMethods']['set'])) {
-            $this->{$conf['existingMethods']['set']}($value);
-        } else {
-            if (null !== $conf['mutator']) {
-                $value = call_user_func($conf['mutator'], $value);
-            }
-
-            $this->{$property} = $value;
-        }
+        $classConf['setImpl']($this, $property, $value, $propertyConf);
     }
 
     public function __isset(string $property): bool
     {
-        $conf = loadConfiguration(static::class)['getPropertyConf']($property);
+        $classConf = Core::loadConfiguration(static::class);
+        $propertyConf = $classConf['getPropertyConf']($property);
 
-        if (!isset($conf)) {
-            throw new InvalidArgumentException(sprintf('tried to query unknown property "%s"', $property));
-        }
-
-        if (!$conf['get']) {
-            throw new InvalidArgumentException(sprintf('tried to query private/protected property "%s"', $property));
-        }
-
-        if (isset($conf['existingMethods']['isset'])) {
-            return $this->{$conf['existingMethods']['isset']}();
-        }
-
-        return isset($this->{$property});
+        return $classConf['issetImpl']($this, $property, $propertyConf);
     }
 
     public function __unset(string $property): void
     {
-        $conf = loadConfiguration(static::class)['getPropertyConf']($property);
+        $classConf = Core::loadConfiguration(static::class);
+        $propertyConf = $classConf['getPropertyConf']($property);
+        $immutable = $propertyConf['immutable'] ?? false;
 
-        if (!isset($conf)) {
-            throw new InvalidArgumentException(sprintf('tried to unset unknown property "%s"', $property));
-        }
-
-        if (!$conf['unset']) {
-            throw new InvalidArgumentException(sprintf('tried to unset private/protected property "%s"', $property));
-        }
-
-        if (isset($conf['existingMethods']['unset'])) {
-            $this->{$conf['existingMethods']['unset']}();
-        } else {
-            unset($this->{$property});
-        }
-    }
-}
-
-function loadConfiguration(string $curClassName): array
-{
-    static $classesConf = [];
-    static $propertiesConf = [];
-
-    if (!isset($propertiesConf[$curClassName])) {
-        $propertiesConf[$curClassName] = [
-            'byCase' => [],
-            'byLCase' => []
-        ];
-
-        $parseAttributes = function (ReflectionClass|ReflectionProperty $reflection): array {
-            $conf = [];
-            foreach (['get', 'set', 'unset', 'mutator', 'ci'] as $f) {
-                $conf[$f] = [
-                    'isset' => false,
-                    'value' => null
-                ];
-            }
-
-            foreach ($reflection->getAttributes() as $reflectionAttribute) {
-                switch ($reflectionAttribute->getName()) {
-                    case Get::class:
-                        $enabled = $reflectionAttribute->newInstance()->enabled();
-                        if (null !== $enabled) {
-                            $conf['get'] = [
-                                'isset' => true,
-                                'value' => $enabled
-                            ];
-                        }
-                        break;
-                    case Set::class:
-                        $inst = $reflectionAttribute->newInstance();
-                        $enabled = $inst->enabled();
-                        if (null !== $enabled) {
-                            $conf['set'] = [
-                                'isset' => true,
-                                'value' => $enabled
-                            ];
-                        }
-                        $mutator = $inst->mutator();
-                        if (null !== $mutator) {
-                            $conf['mutator'] = [
-                                'isset' => true,
-                                'value' => ("" !== $mutator ? $mutator : null)
-                            ];
-                        }
-                        break;
-                    case Delete::class:
-                        $enabled = $reflectionAttribute->newInstance()->enabled();
-                        if (null !== $enabled) {
-                            $conf['unset'] = [
-                                'isset' => true,
-                                'value' => $enabled
-                            ];
-                        }
-                        break;
-                    case ICase::class:
-                        $conf['ci'] = [
-                            'isset' => true,
-                            'value' => true
-                        ];
-                        break;
-                }
-            }
-
-            return $conf;
-        };
-
-        $mergeAttributes = function (?array $parent, array $child): array {
-            if (null !== $parent) {
-                foreach (['get', 'set', 'unset', 'mutator', 'ci'] as $f) {
-                    if (!$child[$f]['isset']) {
-                        $child[$f] = $parent[$f];
-                    }
-                }
-            }
-
-            return $child;
-        };
-
-        $classNames = array_reverse(array_merge([$curClassName], class_parents($curClassName)));
-        $mergedClassAttr = null;
-
-        foreach ($classNames as $className) {
-            if (!isset($classesConf[$className])) {
-                $classAttr = $parseAttributes(new ReflectionClass($className));
-
-                $mergedClassAttr = $mergeAttributes($mergedClassAttr, $classAttr);
-                $classesConf[$className] = $mergedClassAttr;
-            } else {
-                $mergedClassAttr = $classesConf[$className];
-            }
-        }
-
-        $reflectionClass = new ReflectionClass($curClassName);
-
-        // Find all existing "set<Property>", "get<Property>", "isset<Property>" and "unset<Property>" methods
-        $existingMethods = [];
-        foreach ($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC) as $reflectionMethod) {
-            /** @var $reflectionMethod ReflectionMethod */
-            if (!$reflectionMethod->isStatic()
-                && preg_match('/^(set|get|isset|unset)(.+)/', strtolower($reflectionMethod->getName()), $matches)
-            ) {
-                $existingMethods[$matches[2]][$matches[1]] = $reflectionMethod->getName();
-            }
-        }
-
-        // Parse attributes of each property
-        foreach ($reflectionClass->getProperties(ReflectionProperty::IS_PROTECTED) as $reflectionProperty) {
-            $property = $reflectionProperty->getName();
-            $lcaseProperty = strtolower($property);
-
-            $propertyConfRaw = $mergeAttributes(
-                $classesConf[$curClassName],
-                $parseAttributes($reflectionProperty)
+        if ($immutable) {
+            throw new BadMethodCallException(
+                sprintf(
+                    'immutable property "%s" can\'t be unset using unset() function (use %s::unset%s() method instead)',
+                    $property,
+                    static::class,
+                    ucfirst($property)
+                )
             );
-
-            $propertyConf = [];
-            foreach ($propertyConfRaw as $f => $v) {
-                if ($v['isset']) {
-                    $propertyConf[$f] = $v['value'];
-                } else {
-                    $propertyConf[$f] = ('mutator' === $f ? null : false);
-                }
-            }
-
-            $propertyConf['existingMethods'] = $existingMethods[$lcaseProperty] ?? [];
-
-            // Mutator methodname can be in format:
-            //      "someFunction"
-            //      "self::someMethod"
-            //      "parent::someMethod"
-            //      "static::someMethod"
-            //
-            // Name can also contain special variable '%property%' which is then replaced by the appropriate
-            // property name. This is useful only when specifying mutator through class attributes.
-            if (is_string($propertyConf['mutator'])) {
-                $propertyConf['mutator'] = str_replace('%property%', $property, $propertyConf['mutator']);
-                $splits = explode('::', $propertyConf['mutator'], 2);
-
-                if (2 === count($splits)) {
-                    $propertyConf['mutator'] = $splits;
-                }
-            }
-
-            $propertiesConf[$curClassName]['byCase'][$property] = $propertyConf;
-            $propertiesConf[$curClassName]['byLCase'][$lcaseProperty] = $property;
         }
 
-        // Create closure for retrieving property conf by property name.
-        // Case sensitivity setting is also taken in account.
-        $getFunc = function (string & $property) use ($propertiesConf, $curClassName): ?array {
-            return $propertiesConf[$curClassName]['byCase'][$property] ?? null;
-        };
-
-        if ($classesConf[$curClassName]['ci']['value']) {
-            $getFunc = function (string & $property) use ($getFunc, $propertiesConf, $curClassName): ?array {
-                $origPropertyName = $propertiesConf[$curClassName]['byLCase'][strtolower($property)] ?? null;
-
-                if (!isset($origPropertyName)) {
-                    return null;
-                }
-
-                $property = $origPropertyName;
-
-                return $getFunc($property);
-            };
-        }
-
-        $propertiesConf[$curClassName]['getPropertyConf'] = $getFunc;
+        $classConf['unsetImpl']($this, $property, $propertyConf);
     }
-
-    return $propertiesConf[$curClassName];
 }
+
