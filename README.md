@@ -363,6 +363,10 @@ To update the value of property `$prop1`:
 * `$obj->set('prop1', 'some value');`
 * `$obj->prop1('some value');`
 
+To update the value of immutable property `$prop1`:
+* `$cloned = $obj->withProp1('some value');`
+* `$cloned = $obj->with('prop1', 'some value');`
+
 To unset the value of property `$prop1`:
 * `unset($obj->prop1);`
 * `$obj->unsetProp1();`
