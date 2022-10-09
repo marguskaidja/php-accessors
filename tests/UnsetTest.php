@@ -113,12 +113,12 @@ class UnsetTest extends TestCase
         };
 
         $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('|' . preg_quote('can\'t be unset using unset() function', '|') . '|');
+        $this->expectExceptionMessageMatches('|' . preg_quote('can\'t be unset', '|') . '|');
 
         unset($obj->p1);
     }
 
-    public function test_immutable_original_object_must_not_be_modified()
+    public function test_unsetting_immutable_property_using_magic_call_must_fail()
     {
         $oldValue = 'old value';
         $obj = new #[Delete,Immutable] class($oldValue) {
@@ -135,42 +135,9 @@ class UnsetTest extends TestCase
             }
         };
 
-        $obj->unsetP1();
-        $this->assertEquals($oldValue, $obj->getP1Value());
-    }
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('|' . preg_quote('can\'t be unset', '|') . '|');
 
-    public function test_cloned_object_must_be_returned_with_modified_value()
-    {
-        $oldValue = 'old value';
-
-        $obj1 = new #[Delete,Get,Immutable] class($oldValue) {
-            use GetSetTrait;
-
-            public function __construct(
-                protected string $p1
-            ) {
-            }
-
-            public function equals(self $other): bool
-            {
-                return  $this === $other;
-            }
-
-            public function getP1Value()
-            {
-                return $this->p1;
-            }
-
-            public function issetP1()
-            {
-                return isset($this->p1);
-            }
-        };
-
-        $obj2 = $obj1->unsetP1();
-
-        $this->assertEquals($oldValue, $obj1->getP1Value());
-        $this->assertEquals(false, $obj2->issetP1());
-        $this->assertNotObjectEquals($obj1, $obj2);
+        $obj->unset('p1');
     }
 }
