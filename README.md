@@ -31,23 +31,23 @@ class A
 
     protected string $prop2;
 
-    public function getProp1()
+    public function getProp1(): mixed
     {
         return $this->prop1;
     }
 
-    public function getProp2()
+    public function getProp2(): mixed
     {
         return $this->prop2;
     }
 
-    public function setProp1($value)
+    public function setProp1($value): static
     {
         $this->prop1 = $value;
         return $this;
     }
 
-    public function setProp2($value)
+    public function setProp2($value): static
     {
         $this->prop2 = $value;
         return $this;
@@ -135,14 +135,15 @@ It can validate and/or tweak the value before it's assigned to property.
 
 _Mutator_ parameter must be string and can contain function/method name in format:
 * `<function>`
+* `$this-><method>`
 * `<class>::<method>`
-* `self::<method>`
-* `parent::<method>`
+* `self::<method>` (NB! can be used only with static class methods)
+* `parent::<method>` (NB! can be used only with static class methods)
 * `static::<method>`
 
 _Mutator_ parameter can contain a special variable named `%property%` which is replaced by the property name it applies. This is useful only when specifying mutator globally in class attribute.
 
-_Mutator_ callback receives the settable value as first parameter and the value it returns is then assigned to property.
+_Mutator_ callback receives the settable value as first parameter and it's return value is then assigned to property.
 
 ### Unsetting property
 
@@ -219,13 +220,13 @@ $obj = new B();
 $obj->prop1 = 'value';
 echo $obj->prop1; // Outputs "value"
 
-$obj->prop2 = 'value'; // Throws InvalidArgumentException
+$obj->prop2 = 'value'; // Throws BadMethodCallException
 ```
 
 ### Case sensitivity in property names
 
 Currently following rules apply when dealing with case sensitivity in property names:
-1. When accessed through method, then property name is treated as case-insensitive. Thus if for whatever reason you have names which only differ in case, then the last defined property is used:
+1. When accessed through method and property name is part of method name, then it's treated case-insensitive. Thus if for whatever reason you have names which only differ in case, then the last defined property is used:
 ```php
 #[Get,Set]
 class A
@@ -237,11 +238,18 @@ class A
 }
 
 $obj = new A();
-$obj->setProp1('value');   // A::$PROP1 is modified
+$obj->setProp1('value');        // Case INsensitive: A::$PROP1 is modified
+$obj->prop1('value');           // Case INsensitive: A::$PROP1 is modified
 ```
-2. When accessed using direct-access, then property names are treated case-sensitively by default.
-   
-   This can be changed by adding `ICase` attribute to class declaration. Attribute must be added to whole class (thus not to properties) and can't be reverted in child classes to prevent ambiguouty in the class hierarchy.
+2. In all other situations, the property names are treated case-sensitive by default.
+
+```php
+$obj->set('prop1', 'value');    // Case sensitive: A::$prop1 is modified
+echo $obj->prop1;               // Case sensitive: A::$prop1 is returned
+echo $obj->Prop1;               // Throws BadMethodCallException: "tried to read unknown property..." 
+```
+  
+Case-insensitivity for all situations can be turned on by adding `ICase` attribute to class declaration. Attribute must be added to whole class (thus not to properties) and can't be reverted in child classes to prevent ambiguouty in the class hierarchy.
 ```php
 #[Get,Set,ICase]
 class A
@@ -253,9 +261,78 @@ class A
 }
 
 $obj = new A();
-$obj->Prop1 = 'value';   // A::$PROP1 is modified
+$obj->Prop1 = 'value';   // Case INsensitive: A::$PROP1 is modified
+echo $obj->Prop1;        // Case INsensitive: A::$PROP1 is returned 
 ```   
-   However the recommended way is leave the case-sensitivity on and always access the property by the name it's declared in the class to have the same consistent code throughout whole codebase.
+However the recommended way is leave the case-sensitivity on and always access the property by the name it's declared in the class to have the same consistent code throughout whole codebase.
+
+### Immutable properties
+
+By default the objects which allow their properties to be changed are mutable. Sometimes it's neccessary to prevent mutability but somehow still allow to change some or all the properties. 
+Consider following situtaion:
+```php
+#[Get]
+class A 
+{
+    use GetSetTrait;
+
+    public function __construct(
+        protected $a,
+        protected $b,
+        protected $c,
+        protected $d,
+        protected $e,
+        protected $f
+    )
+    {
+    }
+}
+
+// Configure object $a
+$a = new A(1, 2, 3, 4, 5, 6);
+
+// Configure object $b, which differs from $a only by single value (property $f).
+// But to achieve this, we had to read the rest of the values from object $a and pass to constructor to create new object. 
+// This can result in bloated and complex code.
+$b = new B($a->a, $a->b,  $a->c,  $a->d,  $a->e,  7);
+```
+
+Here's where immutable object/properties come to help: 
+```php
+#[Get,Set,Immutable]
+class A 
+{
+    use GetSetTrait;
+
+    public function __construct(
+        protected $a,
+        protected $b,
+        protected $c,
+        protected $d,
+        protected $e,
+        protected $f
+    )
+    {
+    }
+}
+
+// Configure object $a
+$a = new A(1, 2, 3, 4, 5, 6);
+
+// Clone object $a and change only 1 property in cloned object.
+// Very clean and simple.
+$b = $a->with('f', 7);
+
+// The original object $a still stays intact
+echo (int)($a === $b); // Outputs "0"
+echo $a->f; // Outputs "6"
+echo $b->f; // Outputs "7"
+```
+
+Notes:
+* To prevent ambiguity, immutable properties must be changed using  method `with` instead of `set`. Using `set` produces exception.
+* Unsetting immutable properties is not possible and produces exception.
+
 
 ## Full API
 
@@ -267,6 +344,7 @@ $obj->Prop1 = 'value';   // A::$PROP1 is modified
    * `margusk\GetSet\Attributes\Set(?bool $enabled = true, string $mutator = null)`: allow or disable to update the property. Second argument denotes optional _Mutator_ method through which the value is passed through before assigning to property.
    * `margusk\GetSet\Attributes\Delete(?bool $enabled = true)`: allow or disable to `unset()` the property.
    * `margusk\GetSet\Attributes\ICase()`: make accessing the property names case-insensitive. This cane be added only to class declaration and can't be reverted later.
+   * `margusk\GetSet\Attributes\Immutable()`: turn on immutable flag for single property or whole class. Once the flag is enabled, it can't be disabled later. 
 
 Note:
    * `null` value can be also used for `$enabled`, if you don't want to change the setting inherited from parent's declaration. This is currently useful only for `Set` attribute where in class declaration there is default _mutator_ method defined and it needs to be changed by inherited class or property.
@@ -276,17 +354,21 @@ Note:
 To read the value of property `$prop1`:
 * `echo $obj->prop1;`
 * `echo $obj->getProp1();`
+* `echo $obj->get('prop1);`
 * `echo $obj->prop1();`
 
 To update the value of property `$prop1`:
 * `$obj->prop1 = 'some value';`
 * `$obj->setProp1('some value');`
+* `$obj->set('prop1', 'some value');`
 * `$obj->prop1('some value');`
 
 To unset the value of property `$prop1`:
 * `unset($obj->prop1);`
 * `$obj->unsetProp1();`
+* `$obj->unset('prop1);`
 
 To test if `$prop1` property is set. This is allowed/disabled with `Get` attribute:
 * `echo isset($obj->prop1);`
 * `echo $obj->issetProp1();`
+* `echo $obj->isset('prop1);`

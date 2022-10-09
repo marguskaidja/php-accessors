@@ -159,18 +159,6 @@ trait GetSetTrait
     {
         $classConf = Core::loadConfiguration(static::class);
         $propertyConf = $classConf['getPropertyConf']($property);
-        $immutable = $propertyConf['immutable'] ?? false;
-
-        if ($immutable) {
-            throw new BadMethodCallException(
-                sprintf(
-                    'immutable property "%s" can\'t be unset using unset() function (use %s::unset%s() method instead)',
-                    $property,
-                    static::class,
-                    ucfirst($property)
-                )
-            );
-        }
 
         $classConf['unsetImpl']($this, $property, $propertyConf);
     }

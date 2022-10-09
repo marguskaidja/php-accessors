@@ -268,7 +268,12 @@ final class Core
             }
 
             if ($propertyConf['immutable']) {
-                $object = clone $object;
+                throw new BadMethodCallException(
+                    sprintf(
+                        'immutable property "%s" can\'t be unset',
+                        $property
+                    )
+                );
             }
 
             if (isset($propertyConf['existingMethods']['unset'])) {
