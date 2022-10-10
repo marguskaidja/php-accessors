@@ -1,17 +1,15 @@
 # GetSet
 
-This library helps to create automatic getter / setter methods for class properties.
+Current library helps to create automatic accessor (getters/setters) methods for object properties and keep the code simple and unbloated.
+Accessors are neccessary when dealing with DTO-s (Data Transfer Objects).
 
-It's base usage would be to provide setter-method-chaining in DTO-s (Data Transfer Objects).
-
-Due the fact that it's configuration is built upon [PHP attributes](https://www.php.net/manual/en/language.attributes.overview.php), it's faster and more native than the implementations which use DocBlocks to parse out information about which property and how should be made accessible.
+It's configuration is built upon [PHP attributes](https://www.php.net/manual/en/language.attributes.overview.php), which makes it faster and more native than implementations which use DocBlocks to parse out information about which property and how should be made accessible.
 
 ## Requirements
 
-Only requirement is **PHP 8+**. No external library is needed for normal usage.
+Only requirement is **PHP 8.0** or later.
 
-For running the tests:
-* [PHPUnit](https://phpunit.de/) is required
+No external library is needed except for testing purposes, where [PHPUnit](https://phpunit.de/) is required
 
 ## Installation
 
@@ -84,7 +82,7 @@ $a = (new A())->
     setProp2('value2');
 ```
 
-When you have lot's of properties you want to expose, then it's not reasonable to mark each one of them separately. Mark all properties at once in the class declaration:
+If you have lot's of properties to expose, then it's not reasonable to mark each one of them separately. Mark all properties at once in the class declaration:
 ```php
 #[Get,Set]
 class A
@@ -115,7 +113,7 @@ class A
 
 ### Mutator
 
-Sometimes it's handy to pass the setter value through some method before assigning to property. This method is called _mutator_ and can be specified as second parameter for the `Set` attribute:
+Sometimes it's handy to proxy the setter value through some intermediate method before assigning to property. This method is called _mutator_ and can be specified as second parameter for the `Set` attribute:
 ```php
 #[Get,Set]
 class A
@@ -143,7 +141,7 @@ _Mutator_ parameter must be string and can contain function/method name in forma
 
 _Mutator_ parameter can contain a special variable named `%property%` which is replaced by the property name it applies. This is useful only when specifying mutator globally in class attribute.
 
-_Mutator_ callback receives the settable value as first parameter and it's return value is then assigned to property.
+The callback must accept the settable value as first parameter and it's return value is then assigned to property.
 
 ### Unsetting property
 
@@ -163,7 +161,7 @@ class A
 (new A())->unsetProp1();
 ```
 
-Why `Delete` and not `Unset`? Because `Unset` is reserved word and can't be used as attribute nor class name.
+Why use `Delete` in attribute name instead of `Unset`? Because `Unset` is reserved word and can't be used as attribute nor class name.
 
 ### Existing getter/setter methods
 
@@ -193,13 +191,18 @@ var_dump($opj->prop1Set); // Outputs "bool(true)"
 ```
 
 Notes:
-* To be able to use existing method, it must start with `set`, `get`, `isset` or `unset` prefix and follow with property name.
-* Existing method's visibility must be `public` and non-static. `private` and `protected` methods are ignored.
+* To be able to use existing method, it must start with `set`, `get`, `isset`, `unset` or `with` prefix and follow with property name.
+* Method's visibility must be `public` and non-static. `private` and `protected` methods are ignored.
 * In case existing `set` method is used, the _mutator_ method is not called. Mutating should be done inside existing `set<property>` method.
+* Return values:
+  * from existing `get` and `isset` methods are proxied back to original caller.
+  * from existing `set` and `unset` methods are discarded.
+  * from existing `with` method is proxied back to original caller only if the result is object and derives from current class. Other return values are silently discarded and original caller gets `clone`-d object instance.
 
+   
 ### Class inheritance
 
-Attribute inheritance works like it's expected. All attributes in parent class declaration are inherited by child class and can be overwritten:
+Attribute inheritance works intuitively. Attributes in parent class declaration are inherited by child class and can be overwritten (except `ICase` and `Immutable`):
 
 ```php
 #[Get,Set]
@@ -225,7 +228,7 @@ $obj->prop2 = 'value'; // Throws BadMethodCallException
 
 ### Case sensitivity in property names
 
-Currently following rules apply when dealing with case sensitivity in property names:
+Following rules apply when dealing with case sensitivity in property names:
 1. When accessed through method and property name is part of method name, then it's treated case-insensitive. Thus if for whatever reason you have names which only differ in case, then the last defined property is used:
 ```php
 #[Get,Set]
@@ -297,7 +300,7 @@ $a = new A(1, 2, 3, 4, 5, 6);
 $b = new B($a->a, $a->b,  $a->c,  $a->d,  $a->e,  7);
 ```
 
-Here's where immutable object/properties come to help: 
+This is where immutable object/properties help to simplify things: 
 ```php
 #[Get,Set,Immutable]
 class A 
@@ -330,8 +333,8 @@ echo $b->f; // Outputs "7"
 ```
 
 Notes:
-* To prevent ambiguity, immutable properties must be changed using  method `with` instead of `set`. Using `set` produces exception.
-* Unsetting immutable properties is not possible and produces exception.
+* To prevent ambiguity, immutable properties must be changed using  method `with` instead of `set`. Using `set` results in exception.
+* Unsetting immutable properties is not possible and results in exception.
 
 
 ## Full API
