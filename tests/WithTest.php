@@ -105,4 +105,50 @@ class WithTest extends TestCase
         $this->assertEquals($newValue, $obj2->getP1Value());
         $this->assertNotObjectEquals($obj1, $obj2);
     }
+
+    public function test_updating_multiple_values_should_work()
+    {
+        $obj1 = new #[Set,Immutable] class {
+            use GetSetTrait;
+
+            protected string $p0 = 'empty0';
+            protected string $p1 = 'empty1';
+            protected string $p2 = 'empty2';
+            protected string $p3 = 'empty3';
+
+            public function equals(self $other): bool
+            {
+                return  $this === $other;
+            }
+
+            public function getPropertyValue(string $propertyName)
+            {
+                return $this->{$propertyName};
+            }
+        };
+
+        $values = [
+            'value0', 'value1', 'value2', 'value3'
+        ];
+
+        $obj2 = $obj1->with([
+            'p0' => $values[0],
+            'p1' => $values[1],
+            'p2' => $values[2],
+            'p3' => $values[3],
+        ]);
+
+        $this->assertEquals($values[0], $obj2->getPropertyValue('p0'));
+        $this->assertEquals($values[1], $obj2->getPropertyValue('p1'));
+        $this->assertEquals($values[2], $obj2->getPropertyValue('p2'));
+        $this->assertEquals($values[3], $obj2->getPropertyValue('p3'));
+
+        $this->assertEquals('empty0', $obj1->getPropertyValue('p0'));
+        $this->assertEquals('empty1', $obj1->getPropertyValue('p1'));
+        $this->assertEquals('empty2', $obj1->getPropertyValue('p2'));
+        $this->assertEquals('empty3', $obj1->getPropertyValue('p3'));
+
+        $this->assertNotObjectEquals($obj1, $obj2);
+    }
+
 }
