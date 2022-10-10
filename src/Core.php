@@ -138,7 +138,7 @@ final class Core
             foreach ($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC) as $reflectionMethod) {
                 /** @var $reflectionMethod ReflectionMethod */
                 if (!$reflectionMethod->isStatic()
-                    && preg_match('/^(set|get|isset|unset)(.+)/', strtolower($reflectionMethod->getName()), $matches)
+                    && preg_match('/^(set|get|isset|unset|with)(.+)/', strtolower($reflectionMethod->getName()), $matches)
                 ) {
                     $existingMethods[$matches[2]][$matches[1]] = $reflectionMethod->getName();
                 }
@@ -222,7 +222,7 @@ final class Core
 
     private static function createSetImplementation(string $curClassName): Closure
     {
-        return (function (object $object, string $property, mixed $value, ?array $propertyConf): object {
+        return (function (object $object, string $accessorMethod, string $property, mixed $value, ?array $propertyConf) use ($curClassName): object {
             if (!$propertyConf) {
                 throw new BadMethodCallException(sprintf('tried to set unknown property "%s"', $property));
             }
@@ -233,12 +233,12 @@ final class Core
                 );
             }
 
-            if ($propertyConf['immutable']) {
-                $object = clone $object;
-            }
+            if (isset($propertyConf['existingMethods'][$accessorMethod])) {
+                $result = $object->{$propertyConf['existingMethods'][$accessorMethod]}($value);
 
-            if (!$propertyConf['immutable'] && isset($propertyConf['existingMethods']['set'])) {
-                $object->{$propertyConf['existingMethods']['set']}($value);
+                if (is_object($result) && is_subclass_of($result, $curClassName, false)) {
+                    $object = $result;
+                }
             } else {
                 $mutator = $propertyConf['mutator'];
                 if (null !== $mutator) {
