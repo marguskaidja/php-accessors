@@ -68,7 +68,7 @@ trait GetSetTrait
             }
         }
 
-        // Accessor method must be resolved at this point or we fail
+        // Accessor method must be resolved at this point, or we fail
         if (null !== $accessorMethod) {
             $getPropertyConfFunc = null;
 
@@ -91,7 +91,7 @@ trait GetSetTrait
                     }
                 } else {
                     // If we arrive here, then property name was specified inside current method name and
-                    // in this case we always interprete it as case insensitive
+                    // in this case we always interpret it as case-insensitive
                     $getPropertyConfFunc = $classConf['getPropertyConfICase'];
                 }
 

@@ -166,6 +166,7 @@ final class Core
                 $propertyConf['existingMethods'] = $existingMethods[$lcaseProperty] ?? [];
 
                 // Mutator methodname can be in format:
+                ///     "$this->someMethod"
                 //      "someFunction"
                 //      "self::someMethod"
                 //      "parent::someMethod"
@@ -176,7 +177,7 @@ final class Core
                 if (is_string($propertyConf['mutator'])) {
                     $propertyConf['mutator'] = str_replace('%property%', $property, $propertyConf['mutator']);
 
-                    if (preg_match("/^(?:\\$)?this->(.+)/", $propertyConf['mutator'], $matches)) {
+                    if (preg_match("/^\\$?this->(.+)/", $propertyConf['mutator'], $matches)) {
                         $propertyConf['mutator'] = [null, $matches[1]];
                     } else {
                         $splits = explode('::', $propertyConf['mutator'], 2);
@@ -236,7 +237,9 @@ final class Core
             if (isset($propertyConf['existingMethods'][$accessorMethod])) {
                 $result = $object->{$propertyConf['existingMethods'][$accessorMethod]}($value);
 
-                if (is_object($result) && is_subclass_of($result, $curClassName, false)) {
+                if ('with' === $accessorMethod
+                    && is_object($result)
+                    && is_subclass_of($result, $curClassName, false)) {
                     $object = $result;
                 }
             } else {
