@@ -137,10 +137,9 @@ class SetTest extends TestCase
             'p3' => $values[3],
         ]);
 
-        $this->assertEquals($values[0], $obj->getPropertyValue('p0'));
-        $this->assertEquals($values[1], $obj->getPropertyValue('p1'));
-        $this->assertEquals($values[2], $obj->getPropertyValue('p2'));
-        $this->assertEquals($values[3], $obj->getPropertyValue('p3'));
+        for ($c = 0; $c <= 3; $c++) {
+            $this->assertEquals($values[$c], $obj->getPropertyValue('p'.$c));
+        }
     }
 
     public function test_mutator_function_must_be_called_in_setter()

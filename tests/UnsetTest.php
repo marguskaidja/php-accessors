@@ -16,7 +16,6 @@ use margusk\GetSet\Attributes\Delete;
 use margusk\GetSet\Attributes\Get;
 use margusk\GetSet\Attributes\Immutable;
 use margusk\GetSet\Exceptions\BadMethodCallException;
-use margusk\GetSet\Exceptions\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
 
 class UnsetTest extends TestCase
@@ -139,5 +138,32 @@ class UnsetTest extends TestCase
         $this->expectExceptionMessageMatches('|' . preg_quote('can\'t be unset', '|') . '|');
 
         $obj->unset('p1');
+    }
+
+    public function test_unsetting_multiple_values_should_work()
+    {
+        $obj = new #[Get, Delete] class {
+            use GetSetTrait;
+
+            protected string $p0 = 'initialized1';
+            protected string $p1 = 'initialized2';
+            protected string $p2 = 'initialized3';
+            protected string $p3 = 'initialized4';
+
+            public function issetPropertyValue(string $propertyName)
+            {
+                return isset($this->{$propertyName});
+            }
+        };
+
+        for ($c = 0; $c <= 3; $c++) {
+            $this->assertEquals(true, $obj->issetPropertyValue('p' . $c));
+        }
+
+        $obj->unset(['p0', 'p1', 'p2', 'p3']);
+
+        for ($c = 0; $c <= 3; $c++) {
+            $this->assertEquals(false, $obj->issetPropertyValue('p' . $c));
+        }
     }
 }

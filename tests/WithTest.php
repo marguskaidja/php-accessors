@@ -138,17 +138,38 @@ class WithTest extends TestCase
             'p3' => $values[3],
         ]);
 
-        $this->assertEquals($values[0], $obj2->getPropertyValue('p0'));
-        $this->assertEquals($values[1], $obj2->getPropertyValue('p1'));
-        $this->assertEquals($values[2], $obj2->getPropertyValue('p2'));
-        $this->assertEquals($values[3], $obj2->getPropertyValue('p3'));
-
-        $this->assertEquals('empty0', $obj1->getPropertyValue('p0'));
-        $this->assertEquals('empty1', $obj1->getPropertyValue('p1'));
-        $this->assertEquals('empty2', $obj1->getPropertyValue('p2'));
-        $this->assertEquals('empty3', $obj1->getPropertyValue('p3'));
+        for ($c = 0; $c <= 3; $c++) {
+            $this->assertEquals('empty'.$c, $obj1->getPropertyValue('p'.$c));
+            $this->assertEquals($values[$c], $obj2->getPropertyValue('p'.$c));
+        }
 
         $this->assertNotObjectEquals($obj1, $obj2);
     }
 
+    public function test_honour_existing_wither_method()
+    {
+        $obj = new #[Set,Immutable] class {
+            const EXPECTED_VALUE = 'existing method called';
+
+            use GetSetTrait;
+
+            protected string $p1;
+
+            public function withP1($value)
+            {
+                $obj = clone $this;
+                $obj->p1 = self::EXPECTED_VALUE;
+                return $obj;
+            }
+
+            public function getP1value()
+            {
+                return $this->p1;
+            }
+        };
+
+        $cloned = $obj->with(['p1' => 'this value must not be assigned']);
+
+        $this->assertEquals($cloned::EXPECTED_VALUE, $cloned->getP1value());
+    }
 }
