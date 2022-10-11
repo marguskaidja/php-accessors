@@ -1,9 +1,9 @@
 # GetSet
 
 Current library helps to create automatic accessor (getters/setters) methods for object properties and keep the code simple and unbloated.
-Accessors are neccessary when dealing with DTO-s (Data Transfer Objects).
+Accessors are useful mainly when dealing with DTO-s (Data Transfer Objects).
 
-It's configuration is built upon [PHP attributes](https://www.php.net/manual/en/language.attributes.overview.php), which makes it faster and more native than implementations which use DocBlocks to parse out information about which property and how should be made accessible.
+It uses simple technique with [trait](https://www.php.net/manual/en/language.oop5.traits.php) to inject it's own implementations of magic ___get()_, ___set()_, ___isset()_, __unset()_ and ___call()_ methods into the desired class. The configuration is built upon [PHP attributes](https://www.php.net/manual/en/language.attributes.overview.php), which makes it faster and more native than implementations which use _DocBlocks_ to parse out information about which property and how should be made accessible.
 
 ## Requirements
 
@@ -326,6 +326,13 @@ $a = new A(1, 2, 3, 4, 5, 6);
 // Very clean and simple.
 $b = $a->with('f', 7);
 
+// Clone object $a and change 3 properties in cloned object.
+$b = $a->with([
+    'a' => 11,
+    'b' => 12,
+    'f' => 7
+]);
+
 // The original object $a still stays intact
 echo (int)($a === $b); // Outputs "0"
 echo $a->f; // Outputs "6"
@@ -364,16 +371,19 @@ To update the value of property `$prop1`:
 * `$obj->prop1 = 'some value';`
 * `$obj->setProp1('some value');`
 * `$obj->set('prop1', 'some value');`
+* `$obj->set(['prop1' => 'value1', 'prop2' => 'value2', ..., 'propN' => 'valueN');`
 * `$obj->prop1('some value');`
 
 To update the value of immutable property `$prop1`:
 * `$cloned = $obj->withProp1('some value');`
 * `$cloned = $obj->with('prop1', 'some value');`
+* `$cloned = $obj->with(['prop1' => 'value1', 'prop2' => 'value2', ..., 'propN' => 'valueN');`
 
 To unset the value of property `$prop1`:
 * `unset($obj->prop1);`
 * `$obj->unsetProp1();`
 * `$obj->unset('prop1);`
+* `$obj->unset(['prop1', 'prop2', ..., 'propN');`
 
 To test if `$prop1` property is set. This is allowed/disabled with `Get` attribute:
 * `echo isset($obj->prop1);`
