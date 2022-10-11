@@ -43,6 +43,10 @@ class SetTest extends TestCase
         $value = 'this is updated value3';
         $obj->setP1($value);
         $this->assertEquals($value, $obj->getP1Value());
+
+        $value = 'this is updated value3';
+        $obj->set(['p1' => $value]);
+        $this->assertEquals($value, $obj->getP1Value());
     }
 
     public function test_set_should_update_value_with_class_attribute()
@@ -68,6 +72,10 @@ class SetTest extends TestCase
 
         $value = 'this is updated value3';
         $obj->setP1($value);
+        $this->assertEquals($value, $obj->getP1Value());
+
+        $value = 'this is updated value3';
+        $obj->set(['p1' => $value]);
         $this->assertEquals($value, $obj->getP1Value());
     }
 
@@ -96,9 +104,45 @@ class SetTest extends TestCase
         $value = 'this is updated value3';
         $obj->setP1($value);
         $this->assertEquals($value, $obj->getP1Value());
+
+        $value = 'this is updated value3';
+        $obj->set(['p1' => $value]);
+        $this->assertEquals($value, $obj->getP1Value());
     }
 
-    public function test_mutator_in_class_attribute()
+    public function test_set_should_update_multiple_values()
+    {
+        $obj = new #[Set] class {
+            use GetSetTrait;
+
+            protected string $p0 = 'empty';
+            protected string $p1 = 'empty';
+            protected string $p2 = 'empty';
+            protected string $p3 = 'empty';
+
+            public function getPropertyValue(string $propertyName)
+            {
+                return $this->{$propertyName};
+            }
+        };
+
+        $values = [
+            'value0', 'value1', 'value2', 'value3'
+        ];
+
+        $obj->set([
+            'p0' => $values[0],
+            'p1' => $values[1],
+            'p2' => $values[2],
+            'p3' => $values[3],
+        ]);
+
+        for ($c = 0; $c <= 3; $c++) {
+            $this->assertEquals($values[$c], $obj->getPropertyValue('p'.$c));
+        }
+    }
+
+    public function test_mutator_function_must_be_called_in_setter()
     {
         $obj = new #[Set(true, "htmlspecialchars")] class {
             use GetSetTrait;
@@ -116,14 +160,14 @@ class SetTest extends TestCase
         $this->assertEquals(htmlspecialchars($value), $obj->getP1Value());
     }
 
-    public function test_static_mutator_in_class_attribute_and_propertyname_substitution()
+    public function test_class_mutator_method_with_property_substition_must_be_called()
     {
-        $obj = new #[Set(true, "self::mutate%property%")] class {
+        $obj = new #[Set(true, "self::staticMutate%property%")] class {
             use GetSetTrait;
 
             protected string $p1;
 
-            public static function mutateP1($value)
+            public static function staticMutateP1($value)
             {
                 return htmlspecialchars($value);
             }
@@ -136,10 +180,76 @@ class SetTest extends TestCase
 
         $value = '<b>GetSet</b>';
         $obj->p1 = $value;
-        $this->assertEquals($obj->mutateP1($value), $obj->getP1Value());
+        $this->assertEquals($obj::staticMutateP1($value), $obj->getP1Value());
     }
 
-    public function test_object_mutator_in_class_attribute_and_propertyname_substitution()
+    public function test_parentclass_mutator_method_with_property_substition_must_be_called()
+    {
+        $obj = new #[Set(true, "parent::staticMutate%property%")] class extends ParentTestClass {
+            use GetSetTrait;
+
+            protected string $p1;
+
+            public static function staticMutateP1($value)
+            {
+                return htmlspecialchars(htmlspecialchars($value));
+            }
+
+            public function getP1Value()
+            {
+                return $this->p1;
+            }
+        };
+
+        $value = '<b>GetSet</b>';
+        $obj->p1 = $value;
+        $this->assertEquals(ParentTestClass::staticMutateP1($value), $obj->getP1Value());
+    }
+
+    public function test_mutator_using_self_called_in_object_context_must_fail()
+    {
+        $obj = new #[Set(true, "self::nonStaticMutate")] class {
+            use GetSetTrait;
+
+            protected string $p1;
+
+            public function nonStaticMutate($value)
+            {
+                return htmlspecialchars($value);
+            }
+
+            public function getP1Value()
+            {
+                return $this->p1;
+            }
+        };
+
+        $this->expectException(\TypeError::class);
+        $this->expectExceptionMessageMatches('|must be a valid callback, non-static method|');
+
+        $obj->p1 = 'some value';
+    }
+
+    public function test_mutator_using_parent_called_in_object_context_must_fail()
+    {
+        $obj = new #[Set(true, "parent::nonStaticMutate")] class extends ParentTestClass {
+            use GetSetTrait;
+
+            protected string $p1;
+
+            public function getP1Value()
+            {
+                return $this->p1;
+            }
+        };
+
+        $this->expectException(\TypeError::class);
+        $this->expectExceptionMessageMatches('|must be a valid callback, non-static method|');
+
+        $obj->p1 = 'some value';
+    }
+
+    public function test_object_mutator_method_with_propertyname_substitution_must_be_called()
     {
         $obj = new #[Set(true, "this->mutate%property%")] class {
             use GetSetTrait;
@@ -224,6 +334,28 @@ class SetTest extends TestCase
         $this->expectExceptionMessageMatches('|tried to set unknown property|');
 
         $obj->setP2('new value');
+    }
+
+    public function test_set_should_fail_with_unknown_property_using_method_call_with_multiple_properties()
+    {
+        $obj = new #[Set] class {
+            use GetSetTrait;
+
+            protected string $p1 = 'this is protected value';
+            protected string $p2 = 'this is protected value';
+            protected string $p3 = 'this is protected value';
+            protected string $p5 = 'this is protected value';
+        };
+
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('|tried to set unknown property|');
+
+        $obj->set([
+            'p1' => 'new value',
+            'p2' => 'new value',
+            'p3' => 'new value',
+            'p4' => 'new value'
+        ]);
     }
 
     public function test_attributes_must_be_inherited_from_parent_class()

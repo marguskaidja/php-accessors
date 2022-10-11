@@ -105,4 +105,71 @@ class WithTest extends TestCase
         $this->assertEquals($newValue, $obj2->getP1Value());
         $this->assertNotObjectEquals($obj1, $obj2);
     }
+
+    public function test_updating_multiple_values_should_work()
+    {
+        $obj1 = new #[Set,Immutable] class {
+            use GetSetTrait;
+
+            protected string $p0 = 'empty0';
+            protected string $p1 = 'empty1';
+            protected string $p2 = 'empty2';
+            protected string $p3 = 'empty3';
+
+            public function equals(self $other): bool
+            {
+                return  $this === $other;
+            }
+
+            public function getPropertyValue(string $propertyName)
+            {
+                return $this->{$propertyName};
+            }
+        };
+
+        $values = [
+            'value0', 'value1', 'value2', 'value3'
+        ];
+
+        $obj2 = $obj1->with([
+            'p0' => $values[0],
+            'p1' => $values[1],
+            'p2' => $values[2],
+            'p3' => $values[3],
+        ]);
+
+        for ($c = 0; $c <= 3; $c++) {
+            $this->assertEquals('empty'.$c, $obj1->getPropertyValue('p'.$c));
+            $this->assertEquals($values[$c], $obj2->getPropertyValue('p'.$c));
+        }
+
+        $this->assertNotObjectEquals($obj1, $obj2);
+    }
+
+    public function test_honour_existing_wither_method()
+    {
+        $obj = new #[Set,Immutable] class {
+            const EXPECTED_VALUE = 'existing method called';
+
+            use GetSetTrait;
+
+            protected string $p1;
+
+            public function withP1($value)
+            {
+                $obj = clone $this;
+                $obj->p1 = self::EXPECTED_VALUE;
+                return $obj;
+            }
+
+            public function getP1value()
+            {
+                return $this->p1;
+            }
+        };
+
+        $cloned = $obj->with(['p1' => 'this value must not be assigned']);
+
+        $this->assertEquals($cloned::EXPECTED_VALUE, $cloned->getP1value());
+    }
 }

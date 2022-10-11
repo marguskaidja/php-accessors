@@ -21,4 +21,14 @@ use margusk\GetSet\GetSetTrait;
 class ParentTestClass
 {
     use GetSetTrait;
+
+    public static function staticMutateP1($value)
+    {
+        return htmlspecialchars($value);
+    }
+
+    public function nonStaticMutate($value)
+    {
+        return htmlspecialchars($value);
+    }
 }

@@ -22,101 +22,152 @@ trait GetSetTrait
         $classConf = Core::loadConfiguration(static::class);
 
         $lcaseMethod = strtolower($method);
-        $prefix = substr($lcaseMethod, 0, 3);
 
-        // Check if magic method is one of the followings:
-        //      set<Property>
-        //      with<Property>
-        //      get<Property>
-        //      isset<Property>
-        //      unset<Property>"
-        if ('set' !== $prefix
-            && 'get' !== $prefix
-            && 'with' !== ($prefix = substr($lcaseMethod, 0, 4))
-            && !in_array(($prefix = substr($lcaseMethod, 0, 5)), ['unset', 'isset'])
+        // Try to extract accessor method from magic method name
+        if (!in_array(($accessorMethod = substr($lcaseMethod, 0, 3)), ['get', 'set'])
+            && 'with' !== ($accessorMethod = substr($lcaseMethod, 0, 4))
+            && !in_array(($accessorMethod = substr($lcaseMethod, 0, 5)), ['unset', 'isset'])
         ) {
-            $prefix = null;
+            $accessorMethod = null;
         }
 
         $nArgs = count($args);
-        $property = substr($method, strlen((string)$prefix));
+        $propertyName = substr($method, strlen((string)$accessorMethod));
+        $propertyValue = null;
+        $accessorProperties = [];
+        $accessorMethodIsSetOrWith = in_array($accessorMethod, ['set', 'with']);
 
-        // If not one of the explicit calls above, then check if whole method name is property name like
+        // Check if the call is multi-property accessor, that is if first
+        // argument is array and accessor method is set at this point and is "set", "with" or "unset"
+        if ('' === $propertyName
+            && $nArgs > 0
+            && is_array($args[0])
+            && ($accessorMethodIsSetOrWith || 'unset' === $accessorMethod)) {
+
+            if ($nArgs > 1) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'when first argument is Array then there can\'t be more arguments to method %s()',
+                        $method
+                    )
+                );
+            }
+
+            $accessorProperties = array_shift($args);
+
+        // Check if whole method name is property name like
         //  $obj->somePropertyName('somevalue')
-        if (null === $prefix && isset($classConf['byLCase'][strtolower($property)])) {
+        } elseif (null === $accessorMethod && isset($classConf['byLCase'][strtolower($propertyName)])) {
             // If there are zero arguments, then interpret the call as Getter
             // If there are arguments, then it's Setter
             if ($nArgs > 0) {
-                $prefix = 'set';
+                $accessorMethodIsSetOrWith = true;
+                $accessorMethod = 'set';
             } else {
-                $prefix = 'get';
+                $accessorMethod = 'get';
             }
         }
 
-        if (null !== $prefix) {
-            if ('' === $property) {
-                $property = (string)array_shift($args);
-                // If property name is read as first argument to current method, then
-                // case sensitivity/insensitivity is determined by usage of #[ICase] attribute
-                $getPropertyConfFunc = $classConf['getPropertyConf'];
+        // Accessor method must be resolved at this point, or we fail
+        if (null === $accessorMethod) {
+            throw new BadMethodCallException(sprintf('unknown method %s()', $method));
+        }
+
+        $getPropertyConfFunc = null;
+
+        // If accessorProperties are not set at this point (thus not specified using array
+        // as first parameter to set or with), then extract them as separate arguments to current method
+        if (0 === count($accessorProperties)) {
+            if ('' === $propertyName) {
+                if (!count($args)) {
+                    throw new InvalidArgumentException(
+                        sprintf('missing argument #1 (property name) to method %s()', $method)
+                    );
+                }
+
+                $propertyName = array_shift($args);
+
+                if (!is_string($propertyName)) {
+                    throw new InvalidArgumentException(
+                        sprintf('expecting string as argument #%u (property value) to method %s()', count($args) + 1, $method)
+                    );
+                }
             } else {
-                // If property name is the suffix in current method name, then it's always
-                // interpreted case insensitive
+                // If we arrive here, then property name was specified inside current method name and
+                // in this case we always interpret it as case-insensitive
                 $getPropertyConfFunc = $classConf['getPropertyConfICase'];
             }
 
-            if ('' === $property) {
-                throw new InvalidArgumentException('missing first argument (property name) to method %s()', $method);
+            if ($accessorMethodIsSetOrWith) {
+                if (!count($args)) {
+                    throw new InvalidArgumentException(
+                        sprintf('missing argument #%u (property value) to method %s()', $nArgs + 1, $method)
+                    );
+                }
+
+                $propertyValue = array_shift($args);
             }
 
-            $propertyConf = $getPropertyConfFunc($property);
-            $immutable = $propertyConf['immutable'] ?? false;
+            // Fail if there are more arguments specified than we are willing to process
+            if (count($args)) {
+                throw new InvalidArgumentException(
+                    sprintf('expecting exactly %u argument(s) to method %s()', $nArgs - count($args), $method)
+                );
+            }
 
-            // Call Set/With
-            if ((!$immutable && 'set' === $prefix) || ($immutable && 'with' === $prefix)) {
-                // Check if exactly 1 argument is left in args stack
-                if (1 !== count($args)) {
-                    throw new InvalidArgumentException(
-                        sprintf('expecting exactly %u argument(s) to method %s()', $nArgs - count($args) + 1, $method)
-                    );
-                }
-
-                return $classConf['setImpl']($this, $property, array_shift($args), $propertyConf);
-            // Get, Set or Isset
-            } elseif (in_array($prefix, ['get', 'isset', 'unset'])) {
-                if (0 !== count($args)) {
-                    throw new InvalidArgumentException(
-                        sprintf('expecting exactly %u argument(s) to method %s()', $nArgs - count($args), $method)
-                    );
-                }
-
-                return $classConf[$prefix . 'Impl']($this, $property, $propertyConf);
+            if ($accessorMethodIsSetOrWith) {
+                $accessorProperties[$propertyName] = $propertyValue;
+            } else {
+                $accessorProperties[] = $propertyName;
             }
         }
 
-        if ('with' === $prefix) {
-            throw new BadMethodCallException(
-                sprintf(
-                    'method %s() is available only for immutable properties (use %s::set%s() instead)',
-                    $method,
-                    static::class,
-                    ucfirst($property)
-                )
-            );
-        } elseif ('set' === $prefix) {
-            throw new BadMethodCallException(
-                sprintf(
-                    'method %s() is available only for mutable properties (use %s::with%s() instead)',
-                    $method,
-                    static::class,
-                    ucfirst($property)
-                )
-            );
+        if (null === $getPropertyConfFunc) {
+            $getPropertyConfFunc = $classConf['getPropertyConf'];
+        }
+
+        $result = $this;
+
+        // Call Set or With
+        if ($accessorMethodIsSetOrWith) {
+            if ('with' === $accessorMethod) {
+                $result = clone $result;
+            }
+
+            foreach ($accessorProperties as $propertyName => $propertyValue) {
+                $propertyName = (string)$propertyName;
+                $propertyConf = $getPropertyConfFunc($propertyName);
+                $immutable = $propertyConf['immutable'] ?? null;
+
+                // Check if mutable/immutable property was called using correct method:
+                //  - mutable properties must be accessed using "set"
+                //  - immutable properties must be accessed using "with"
+                if (($immutable === true && 'set' === $accessorMethod)
+                    || ($immutable === false && 'with' === $accessorMethod)) {
+                    throw new BadMethodCallException(
+                        sprintf(
+                            'property "%s" is %s, but method %s() is available only for %s properties (use %s::%s() instead)',
+                            $propertyName,
+                            ($immutable ? 'immutable' : 'mutable'),
+                            $method,
+                            ($immutable ? 'mutable' : 'immutable'),
+                            static::class,
+                            ($immutable ? 'with' : 'set')
+                        )
+                    );
+                }
+
+                $result = $classConf['setImpl']($result, $accessorMethod, $propertyName, $propertyValue, $propertyConf);
+            }
         } else {
-            throw new BadMethodCallException(
-                sprintf('unknown method %s()', $method)
-            );
+            foreach ($accessorProperties as $propertyName) {
+                $propertyName = (string)$propertyName;
+                $propertyConf = $getPropertyConfFunc($propertyName);
+                $result = $classConf[$accessorMethod.'Impl']($result, $propertyName, $propertyConf);
+            }
         }
+
+        return $result;
     }
 
     public function __get(string $property): mixed
@@ -144,7 +195,7 @@ trait GetSetTrait
             );
         }
 
-        $classConf['setImpl']($this, $property, $value, $propertyConf);
+        $classConf['setImpl']($this, 'set', $property, $value, $propertyConf);
     }
 
     public function __isset(string $property): bool

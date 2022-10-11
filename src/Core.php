@@ -138,7 +138,7 @@ final class Core
             foreach ($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC) as $reflectionMethod) {
                 /** @var $reflectionMethod ReflectionMethod */
                 if (!$reflectionMethod->isStatic()
-                    && preg_match('/^(set|get|isset|unset)(.+)/', strtolower($reflectionMethod->getName()), $matches)
+                    && preg_match('/^(set|get|isset|unset|with)(.+)/', strtolower($reflectionMethod->getName()), $matches)
                 ) {
                     $existingMethods[$matches[2]][$matches[1]] = $reflectionMethod->getName();
                 }
@@ -166,6 +166,7 @@ final class Core
                 $propertyConf['existingMethods'] = $existingMethods[$lcaseProperty] ?? [];
 
                 // Mutator methodname can be in format:
+                ///     "$this->someMethod"
                 //      "someFunction"
                 //      "self::someMethod"
                 //      "parent::someMethod"
@@ -176,7 +177,7 @@ final class Core
                 if (is_string($propertyConf['mutator'])) {
                     $propertyConf['mutator'] = str_replace('%property%', $property, $propertyConf['mutator']);
 
-                    if (preg_match("/^(?:\\$)?this->(.+)/", $propertyConf['mutator'], $matches)) {
+                    if (preg_match("/^\\$?this->(.+)/", $propertyConf['mutator'], $matches)) {
                         $propertyConf['mutator'] = [null, $matches[1]];
                     } else {
                         $splits = explode('::', $propertyConf['mutator'], 2);
@@ -222,7 +223,7 @@ final class Core
 
     private static function createSetImplementation(string $curClassName): Closure
     {
-        return (function (object $object, string $property, mixed $value, ?array $propertyConf): object {
+        return (function (object $object, string $accessorMethod, string $property, mixed $value, ?array $propertyConf) use ($curClassName): object {
             if (!$propertyConf) {
                 throw new BadMethodCallException(sprintf('tried to set unknown property "%s"', $property));
             }
@@ -233,12 +234,14 @@ final class Core
                 );
             }
 
-            if ($propertyConf['immutable']) {
-                $object = clone $object;
-            }
+            if (isset($propertyConf['existingMethods'][$accessorMethod])) {
+                $result = $object->{$propertyConf['existingMethods'][$accessorMethod]}($value);
 
-            if (!$propertyConf['immutable'] && isset($propertyConf['existingMethods']['set'])) {
-                $object->{$propertyConf['existingMethods']['set']}($value);
+                if ('with' === $accessorMethod
+                    && is_object($result)
+                    && ($result instanceof $curClassName)) {
+                    $object = $result;
+                }
             } else {
                 $mutator = $propertyConf['mutator'];
                 if (null !== $mutator) {
@@ -294,7 +297,7 @@ final class Core
             }
 
             if (!$propertyConf['get']) {
-                throw new BadMethodCallException(sprintf('tried to read private/protected property "%s"', $property));
+                throw new BadMethodCallException(sprintf('tried to read private/protected property "%s" (missing #[Get] attribute?)', $property));
             }
 
             if (isset($propertyConf['existingMethods']['get'])) {
@@ -313,7 +316,7 @@ final class Core
             }
 
             if (!$propertyConf['get']) {
-                throw new BadMethodCallException(sprintf('tried to query private/protected property "%s"', $property));
+                throw new BadMethodCallException(sprintf('tried to query private/protected property "%s" (missing #[Get] attribute?)', $property));
             }
 
             if (isset($propertyConf['existingMethods']['isset'])) {
