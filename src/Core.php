@@ -239,7 +239,7 @@ final class Core
 
                 if ('with' === $accessorMethod
                     && is_object($result)
-                    && is_subclass_of($result, $curClassName, false)) {
+                    && ($result instanceof $curClassName)) {
                     $object = $result;
                 }
             } else {
@@ -297,7 +297,7 @@ final class Core
             }
 
             if (!$propertyConf['get']) {
-                throw new BadMethodCallException(sprintf('tried to read private/protected property "%s"', $property));
+                throw new BadMethodCallException(sprintf('tried to read private/protected property "%s" (missing #[Get] attribute?)', $property));
             }
 
             if (isset($propertyConf['existingMethods']['get'])) {
@@ -316,7 +316,7 @@ final class Core
             }
 
             if (!$propertyConf['get']) {
-                throw new BadMethodCallException(sprintf('tried to query private/protected property "%s"', $property));
+                throw new BadMethodCallException(sprintf('tried to query private/protected property "%s" (missing #[Get] attribute?)', $property));
             }
 
             if (isset($propertyConf['existingMethods']['isset'])) {
