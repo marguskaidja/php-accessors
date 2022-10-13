@@ -22,6 +22,8 @@ class ParentTestClass
 {
     use GetSetTrait;
 
+    protected string $parentProperty;
+
     public static function staticMutateP1($value)
     {
         return htmlspecialchars($value);
