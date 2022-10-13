@@ -29,7 +29,7 @@ final class Core
 
     public static function loadConfiguration(string $curClassName): array
     {
-        if (!isset(self::$propertiesConf[$curClassName])) {
+        if (!isset(self::$propertiesConf[$curClassName]['byCase'])) {
             self::$propertiesConf[$curClassName] = [
                 'attributes'    => null,
                 'byCase'        => [],

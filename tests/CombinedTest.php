@@ -74,4 +74,23 @@ class CombinedTest extends TestCase
 
         $this->assertEquals($value, $obj->prOperTy);
     }
+
+    public function test_parent_class_is_parsed_correctly_later_when_child_is_accessed_first()
+    {
+        $child = new #[Get, Set, CI] class extends ParentTestClass {
+            use GetSetTrait;
+        };
+
+        $parent = new ParentTestClass();
+
+        $childPropertyValue = 'child property value';
+        $parentPropertyValue = 'parent property value';
+
+        $child->parentProperty = $childPropertyValue;
+        $parent->parentProperty = $parentPropertyValue;
+
+        $this->assertEquals($childPropertyValue, $child->parentProperty);
+        $this->assertEquals($parentPropertyValue, $parent->parentProperty);
+    }
+
 }
