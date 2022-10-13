@@ -30,15 +30,14 @@ final class Core
     public static function loadConfiguration(string $curClassName): array
     {
         if (!isset(self::$propertiesConf[$curClassName]['byCase'])) {
-            self::$propertiesConf[$curClassName] = [
-                'attributes'    => null,
+            self::$propertiesConf[$curClassName] = array_merge(self::$propertiesConf[$curClassName] ?? [], [
                 'byCase'        => [],
                 'byLCase'       => [],
                 'getImpl'       => self::createGetImplementation($curClassName),
                 'setImpl'       => self::createSetImplementation($curClassName),
                 'unsetImpl'     => self::createUnsetImplementation($curClassName),
                 'issetImpl'     => self::createIssetImplementation($curClassName),
-            ];
+            ]);
 
             $parseAttributes = function (ReflectionClass|ReflectionProperty $reflection): array {
                 $conf = [];
@@ -116,17 +115,19 @@ final class Core
                 return $child;
             };
 
-            $classNames = array_reverse(array_merge([$curClassName], class_parents($curClassName)));
-            $mergedClassAttr = null;
+            if (!isset(self::$propertiesConf[$curClassName]['attributes'])) {
+                $classNames = array_reverse(array_merge([$curClassName], class_parents($curClassName)));
+                $mergedClassAttr = null;
 
-            foreach ($classNames as $className) {
-                if (!isset(self::$propertiesConf[$className]['attributes'])) {
-                    $classAttr = $parseAttributes(new ReflectionClass($className));
+                foreach ($classNames as $className) {
+                    if (!isset(self::$propertiesConf[$className]['attributes'])) {
+                        $classAttr = $parseAttributes(new ReflectionClass($className));
 
-                    $mergedClassAttr = $mergeAttributes($mergedClassAttr, $classAttr);
-                    self::$propertiesConf[$className]['attributes'] = $mergedClassAttr;
-                } else {
-                    $mergedClassAttr = self::$propertiesConf[$className]['attributes'];
+                        $mergedClassAttr = $mergeAttributes($mergedClassAttr, $classAttr);
+                        self::$propertiesConf[$className]['attributes'] = $mergedClassAttr;
+                    } else {
+                        $mergedClassAttr = self::$propertiesConf[$className]['attributes'];
+                    }
                 }
             }
 

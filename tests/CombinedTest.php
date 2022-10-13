@@ -77,11 +77,11 @@ class CombinedTest extends TestCase
 
     public function test_parent_class_is_parsed_correctly_later_when_child_is_accessed_first()
     {
-        $child = new #[Get, Set, CI] class extends ParentTestClass {
+        $child = new #[Get, Set, CI] class extends ParentTestClassForAccessOrder {
             use GetSetTrait;
         };
 
-        $parent = new ParentTestClass();
+        $parent = new ParentTestClassForAccessOrder();
 
         $childPropertyValue = 'child property value';
         $parentPropertyValue = 'parent property value';
