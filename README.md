@@ -1,3 +1,4 @@
+[![Tests](https://github.com/marguskaidja/php-getset/actions/workflows/tests.yml/badge.svg)](https://github.com/marguskaidja/php-getset/actions/workflows/tests.yml)
 # GetSet
 
 Current library helps to create automatic accessor (getters/setters) methods for object properties and keep the code simple and unbloated.
