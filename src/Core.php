@@ -121,6 +121,7 @@ final class Core
 
                 foreach ($classNames as $className) {
                     if (!isset(self::$propertiesConf[$className]['attributes'])) {
+                        /** @noinspection PhpUnhandledExceptionInspection */
                         $classAttr = $parseAttributes(new ReflectionClass($className));
 
                         $mergedClassAttr = $mergeAttributes($mergedClassAttr, $classAttr);
@@ -131,6 +132,7 @@ final class Core
                 }
             }
 
+            /** @noinspection PhpUnhandledExceptionInspection */
             $reflectionClass = new ReflectionClass($curClassName);
 
             // Find all existing "set<Property>", "get<Property>", "isset<Property>" and "unset<Property>" methods for
@@ -195,7 +197,7 @@ final class Core
 
             // Create closure for retrieving property conf by property name.
             // Case sensitivity setting is also taken in account.
-            $getFunc = function (string & $property) use ($curClassName): ?array {
+            $getFunc = function (string $property) use ($curClassName): ?array {
                 return self::$propertiesConf[$curClassName]['byCase'][$property] ?? null;
             };
 
@@ -239,7 +241,6 @@ final class Core
                 $result = $object->{$propertyConf['existingMethods'][$accessorMethod]}($value);
 
                 if ('with' === $accessorMethod
-                    && is_object($result)
                     && ($result instanceof $curClassName)) {
                     $object = $result;
                 }
