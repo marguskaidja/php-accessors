@@ -13,8 +13,10 @@ declare(strict_types=1);
 namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\Set;
-use margusk\GetSet\Exceptions\BadMethodCallException;
+use margusk\GetSet\Exception\BadMethodCallException;
+use margusk\GetSet\Exception\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
+use TypeError;
 
 class SetTest extends TestCase
 {
@@ -224,7 +226,7 @@ class SetTest extends TestCase
             }
         };
 
-        $this->expectException(\TypeError::class);
+        $this->expectException(TypeError::class);
         $this->expectExceptionMessageMatches('|must be a valid callback, non-static method|');
 
         $obj->p1 = 'some value';
@@ -243,7 +245,7 @@ class SetTest extends TestCase
             }
         };
 
-        $this->expectException(\TypeError::class);
+        $this->expectException(TypeError::class);
         $this->expectExceptionMessageMatches('|must be a valid callback, non-static method|');
 
         $obj->p1 = 'some value';
@@ -302,8 +304,8 @@ class SetTest extends TestCase
             protected string $p2;
         };
 
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('|tried to set private/protected property|');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set misconfigured property|');
 
         $obj->p2 = 'this must fail';
     }
@@ -316,7 +318,7 @@ class SetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->expectException(BadMethodCallException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to set unknown property|');
 
         $obj->p2 = 'new value';
@@ -330,7 +332,7 @@ class SetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->expectException(BadMethodCallException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to set unknown property|');
 
         $obj->setP2('new value');
@@ -347,7 +349,7 @@ class SetTest extends TestCase
             protected string $p5 = 'this is protected value';
         };
 
-        $this->expectException(BadMethodCallException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to set unknown property|');
 
         $obj->set([

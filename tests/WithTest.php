@@ -14,7 +14,8 @@ namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\Set;
 use margusk\GetSet\Attributes\Immutable;
-use margusk\GetSet\Exceptions\BadMethodCallException;
+use margusk\GetSet\Exception\BadMethodCallException;
+use margusk\GetSet\Exception\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
 
 class WithTest extends TestCase
