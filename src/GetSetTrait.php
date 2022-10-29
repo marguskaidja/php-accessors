@@ -41,7 +41,7 @@ trait GetSetTrait
         // argument is array and accessor method is set at this point and is "set", "with" or "unset"
         if ('' === $propertyName
             && $nArgs > 0
-            && is_array($args[0])
+            && is_array($args[0] ?? null)
             && ($accessorMethodIsSetOrWith || 'unset' === $accessorMethod)) {
 
             if ($nArgs > 1) {
