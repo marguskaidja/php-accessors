@@ -20,8 +20,8 @@ use margusk\GetSet\Attributes\Immutable;
 use margusk\GetSet\Attributes\Set;
 use margusk\GetSet\Exceptions\BadMethodCallException;
 use ReflectionClass;
-use ReflectionProperty;
 use ReflectionMethod;
+use ReflectionProperty;
 
 final class Core
 {
@@ -31,12 +31,12 @@ final class Core
     {
         if (!isset(self::$propertiesConf[$curClassName]['byCase'])) {
             self::$propertiesConf[$curClassName] = array_merge(self::$propertiesConf[$curClassName] ?? [], [
-                'byCase'        => [],
-                'byLCase'       => [],
-                'getImpl'       => self::createGetImplementation($curClassName),
-                'setImpl'       => self::createSetImplementation($curClassName),
-                'unsetImpl'     => self::createUnsetImplementation($curClassName),
-                'issetImpl'     => self::createIssetImplementation($curClassName),
+                'byCase'    => [],
+                'byLCase'   => [],
+                'getImpl'   => self::createGetImplementation($curClassName),
+                'setImpl'   => self::createSetImplementation($curClassName),
+                'unsetImpl' => self::createUnsetImplementation($curClassName),
+                'issetImpl' => self::createIssetImplementation($curClassName),
             ]);
 
             $parseAttributes = function (ReflectionClass|ReflectionProperty $reflection): array {
@@ -105,7 +105,7 @@ final class Core
 
             $mergeAttributes = function (?array $parent, array $child): array {
                 if (null !== $parent) {
-                    foreach (['get', 'set', 'unset', 'mutator', 'icase' ,'immutable'] as $f) {
+                    foreach (['get', 'set', 'unset', 'mutator', 'icase', 'immutable'] as $f) {
                         if (!$child[$f]['isset']) {
                             $child[$f] = $parent[$f];
                         }
@@ -121,6 +121,7 @@ final class Core
 
                 foreach ($classNames as $className) {
                     if (!isset(self::$propertiesConf[$className]['attributes'])) {
+                        /** @noinspection PhpUnhandledExceptionInspection */
                         $classAttr = $parseAttributes(new ReflectionClass($className));
 
                         $mergedClassAttr = $mergeAttributes($mergedClassAttr, $classAttr);
@@ -131,6 +132,7 @@ final class Core
                 }
             }
 
+            /** @noinspection PhpUnhandledExceptionInspection */
             $reflectionClass = new ReflectionClass($curClassName);
 
             // Find all existing "set<Property>", "get<Property>", "isset<Property>" and "unset<Property>" methods for
@@ -139,7 +141,11 @@ final class Core
             foreach ($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC) as $reflectionMethod) {
                 /** @var $reflectionMethod ReflectionMethod */
                 if (!$reflectionMethod->isStatic()
-                    && preg_match('/^(set|get|isset|unset|with)(.+)/', strtolower($reflectionMethod->getName()), $matches)
+                    && preg_match(
+                        '/^(set|get|isset|unset|with)(.+)/',
+                        strtolower($reflectionMethod->getName()),
+                        $matches
+                    )
                 ) {
                     $existingMethods[$matches[2]][$matches[1]] = $reflectionMethod->getName();
                 }
@@ -195,11 +201,11 @@ final class Core
 
             // Create closure for retrieving property conf by property name.
             // Case sensitivity setting is also taken in account.
-            $getFunc = function (string & $property) use ($curClassName): ?array {
+            $getFunc = function (string $property) use ($curClassName): ?array {
                 return self::$propertiesConf[$curClassName]['byCase'][$property] ?? null;
             };
 
-            $getFuncICase = function (string & $property) use ($getFunc, $curClassName): ?array {
+            $getFuncICase = function (string &$property) use ($getFunc, $curClassName): ?array {
                 $origPropertyName = self::$propertiesConf[$curClassName]['byLCase'][strtolower($property)] ?? null;
 
                 if (!isset($origPropertyName)) {
@@ -222,9 +228,36 @@ final class Core
         return self::$propertiesConf[$curClassName];
     }
 
+    private static function createGetImplementation(string $curClassName): Closure
+    {
+        return (function (object $object, string $property, ?array $propertyConf): mixed {
+            if (!isset($propertyConf)) {
+                throw new BadMethodCallException(sprintf('tried to read unknown property "%s"', $property));
+            }
+
+            if (!$propertyConf['get']) {
+                throw new BadMethodCallException(
+                    sprintf('tried to read private/protected property "%s" (missing #[Get] attribute?)', $property)
+                );
+            }
+
+            if (isset($propertyConf['existingMethods']['get'])) {
+                return $object->{$propertyConf['existingMethods']['get']}();
+            }
+
+            return $object->{$property};
+        })->bindTo(null, $curClassName);
+    }
+
     private static function createSetImplementation(string $curClassName): Closure
     {
-        return (function (object $object, string $accessorMethod, string $property, mixed $value, ?array $propertyConf) use ($curClassName): object {
+        return (function (
+            object $object,
+            string $accessorMethod,
+            string $property,
+            mixed $value,
+            ?array $propertyConf
+        ) use ($curClassName): object {
             if (!$propertyConf) {
                 throw new BadMethodCallException(sprintf('tried to set unknown property "%s"', $property));
             }
@@ -239,8 +272,8 @@ final class Core
                 $result = $object->{$propertyConf['existingMethods'][$accessorMethod]}($value);
 
                 if ('with' === $accessorMethod
-                    && is_object($result)
-                    && ($result instanceof $curClassName)) {
+                    && ($result instanceof $curClassName)
+                ) {
                     $object = $result;
                 }
             } else {
@@ -262,13 +295,15 @@ final class Core
 
     private static function createUnsetImplementation(string $curClassName): Closure
     {
-        return (function (object $object, string $property, ?array $propertyConf) : object {
+        return (function (object $object, string $property, ?array $propertyConf): object {
             if (!$propertyConf) {
                 throw new BadMethodCallException(sprintf('tried to unset unknown property "%s"', $property));
             }
 
             if (!$propertyConf['unset']) {
-                throw new BadMethodCallException(sprintf('tried to unset private/protected property "%s" (missing #[Delete] attribute?)', $property));
+                throw new BadMethodCallException(
+                    sprintf('tried to unset private/protected property "%s" (missing #[Delete] attribute?)', $property)
+                );
             }
 
             if ($propertyConf['immutable']) {
@@ -290,34 +325,17 @@ final class Core
         })->bindTo(null, $curClassName);
     }
 
-    private static function createGetImplementation(string $curClassName): Closure
-    {
-        return (function (object $object, string $property, ?array $propertyConf) : mixed {
-            if (!isset($propertyConf)) {
-                throw new BadMethodCallException(sprintf('tried to read unknown property "%s"', $property));
-            }
-
-            if (!$propertyConf['get']) {
-                throw new BadMethodCallException(sprintf('tried to read private/protected property "%s" (missing #[Get] attribute?)', $property));
-            }
-
-            if (isset($propertyConf['existingMethods']['get'])) {
-                return $object->{$propertyConf['existingMethods']['get']}();
-            }
-
-            return $object->{$property};
-        })->bindTo(null, $curClassName);
-    }
-
     private static function createIssetImplementation(string $curClassName): Closure
     {
-        return (function (object $object, string $property, ?array $propertyConf) : bool {
+        return (function (object $object, string $property, ?array $propertyConf): bool {
             if (!isset($propertyConf)) {
                 throw new BadMethodCallException(sprintf('tried to query unknown property "%s"', $property));
             }
 
             if (!$propertyConf['get']) {
-                throw new BadMethodCallException(sprintf('tried to query private/protected property "%s" (missing #[Get] attribute?)', $property));
+                throw new BadMethodCallException(
+                    sprintf('tried to query private/protected property "%s" (missing #[Get] attribute?)', $property)
+                );
             }
 
             if (isset($propertyConf['existingMethods']['isset'])) {

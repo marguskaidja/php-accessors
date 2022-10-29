@@ -42,8 +42,8 @@ trait GetSetTrait
         if ('' === $propertyName
             && $nArgs > 0
             && is_array(current($args))
-            && ($accessorMethodIsSetOrWith || 'unset' === $accessorMethod)) {
-
+            && ($accessorMethodIsSetOrWith || 'unset' === $accessorMethod)
+        ) {
             if ($nArgs > 1) {
                 throw new InvalidArgumentException(
                     sprintf(
@@ -55,8 +55,8 @@ trait GetSetTrait
 
             $accessorProperties = array_shift($args);
 
-        // Check if whole method name is property name like
-        //  $obj->somePropertyName('somevalue')
+            // Check if whole method name is property name like
+            //  $obj->somePropertyName('somevalue')
         } elseif (null === $accessorMethod && isset($classConf['byLCase'][strtolower($propertyName)])) {
             // If there are zero arguments, then interpret the call as Getter
             // If there are arguments, then it's Setter
@@ -89,7 +89,11 @@ trait GetSetTrait
 
                 if (!is_string($propertyName)) {
                     throw new InvalidArgumentException(
-                        sprintf('expecting string as argument #%u (property value) to method %s()', count($args) + 1, $method)
+                        sprintf(
+                            'expecting string as argument #%u (property value) to method %s()',
+                            count($args) + 1,
+                            $method
+                        )
                     );
                 }
             } else {
@@ -143,7 +147,8 @@ trait GetSetTrait
                 //  - mutable properties must be accessed using "set"
                 //  - immutable properties must be accessed using "with"
                 if (($immutable === true && 'set' === $accessorMethod)
-                    || ($immutable === false && 'with' === $accessorMethod)) {
+                    || ($immutable === false && 'with' === $accessorMethod)
+                ) {
                     throw new BadMethodCallException(
                         sprintf(
                             'property "%s" is %s, but method %s() is available only for %s properties (use %s::%s() instead)',
@@ -214,4 +219,3 @@ trait GetSetTrait
         $classConf['unsetImpl']($this, $property, $propertyConf);
     }
 }
-
