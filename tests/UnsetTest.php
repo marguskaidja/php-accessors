@@ -85,7 +85,7 @@ class UnsetTest extends TestCase
             #[Get, Delete]
             protected string $p1 = 'initial value';
 
-            public function unsetP1()
+            public function unsetP1(): void
             {
             }
         };
@@ -106,7 +106,7 @@ class UnsetTest extends TestCase
             ) {
             }
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -129,7 +129,7 @@ class UnsetTest extends TestCase
             ) {
             }
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -151,7 +151,7 @@ class UnsetTest extends TestCase
             protected string $p2 = 'initialized3';
             protected string $p3 = 'initialized4';
 
-            public function issetPropertyValue(string $propertyName)
+            public function issetPropertyValue(string $propertyName): bool
             {
                 return isset($this->{$propertyName});
             }

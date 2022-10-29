@@ -28,7 +28,7 @@ class SetTest extends TestCase
             #[Set]
             protected string $p1;
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -46,7 +46,7 @@ class SetTest extends TestCase
         $obj->setP1($value);
         $this->assertEquals($value, $obj->getP1Value());
 
-        $value = 'this is updated value3';
+        $value = 'this is updated value4';
         $obj->set(['p1' => $value]);
         $this->assertEquals($value, $obj->getP1Value());
     }
@@ -58,7 +58,7 @@ class SetTest extends TestCase
 
             protected string $p1;
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -76,7 +76,7 @@ class SetTest extends TestCase
         $obj->setP1($value);
         $this->assertEquals($value, $obj->getP1Value());
 
-        $value = 'this is updated value3';
+        $value = 'this is updated value4';
         $obj->set(['p1' => $value]);
         $this->assertEquals($value, $obj->getP1Value());
     }
@@ -89,7 +89,7 @@ class SetTest extends TestCase
             #[Set(true)]
             protected string $p1;
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -107,7 +107,7 @@ class SetTest extends TestCase
         $obj->setP1($value);
         $this->assertEquals($value, $obj->getP1Value());
 
-        $value = 'this is updated value3';
+        $value = 'this is updated value4';
         $obj->set(['p1' => $value]);
         $this->assertEquals($value, $obj->getP1Value());
     }
@@ -151,7 +151,7 @@ class SetTest extends TestCase
 
             protected string $p1;
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -169,12 +169,12 @@ class SetTest extends TestCase
 
             protected string $p1;
 
-            public static function staticMutateP1($value)
+            public static function staticMutateP1($value): string
             {
                 return htmlspecialchars($value);
             }
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -192,12 +192,12 @@ class SetTest extends TestCase
 
             protected string $p1;
 
-            public static function staticMutateP1($value)
+            public static function staticMutateP1($value): string
             {
                 return htmlspecialchars(htmlspecialchars($value));
             }
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -210,17 +210,18 @@ class SetTest extends TestCase
 
     public function test_mutator_using_self_called_in_object_context_must_fail()
     {
+        /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set(true, "self::nonStaticMutate")] class {
             use GetSetTrait;
 
             protected string $p1;
 
-            public function nonStaticMutate($value)
+            public function nonStaticMutate($value): string
             {
                 return htmlspecialchars($value);
             }
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -239,7 +240,7 @@ class SetTest extends TestCase
 
             protected string $p1;
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -258,12 +259,12 @@ class SetTest extends TestCase
 
             protected string $p1;
 
-            public function mutateP1($value)
+            public function mutateP1($value): string
             {
                 return htmlspecialchars($value);
             }
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -282,7 +283,7 @@ class SetTest extends TestCase
             #[Set(true, "")]
             protected string $p1;
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -295,6 +296,7 @@ class SetTest extends TestCase
 
     public function test_set_should_fail_with_protected_value()
     {
+        /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set(true)] class {
             use GetSetTrait;
 
@@ -312,6 +314,7 @@ class SetTest extends TestCase
 
     public function test_set_should_fail_with_unknown_property_through_direct_assignment()
     {
+        /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set] class {
             use GetSetTrait;
 
@@ -365,7 +368,7 @@ class SetTest extends TestCase
         $obj = new class extends ParentTestClass {
             protected string $p1;
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -383,12 +386,12 @@ class SetTest extends TestCase
 
             protected string $p1;
 
-            public function setP1($value)
+            public function setP1($value): void
             {
                 $this->p1 = 'mutated value';
             }
 
-            public function getP1value()
+            public function getP1value(): string
             {
                 return $this->p1;
             }

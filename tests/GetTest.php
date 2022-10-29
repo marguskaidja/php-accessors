@@ -152,7 +152,7 @@ class GetTest extends TestCase
 
             protected string $p1 = 'starting value';
 
-            public function getP1()
+            public function getP1(): string
             {
                 return 'value from getter';
             }
@@ -168,7 +168,7 @@ class GetTest extends TestCase
 
             protected string $p1 = 'starting value';
 
-            public function issetP1()
+            public function issetP1(): bool
             {
                 return false;
             }

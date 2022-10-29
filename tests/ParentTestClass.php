@@ -24,12 +24,12 @@ class ParentTestClass
 
     protected string $parentProperty;
 
-    public static function staticMutateP1($value)
+    public static function staticMutateP1($value): string
     {
         return htmlspecialchars($value);
     }
 
-    public function nonStaticMutate($value)
+    public function nonStaticMutate($value): string
     {
         return htmlspecialchars($value);
     }
