@@ -14,6 +14,7 @@ namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\{ICase as CI, Get, Set};
 use margusk\GetSet\Exceptions\BadMethodCallException;
+use margusk\GetSet\Exceptions\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
 
 class CombinedTest extends TestCase
@@ -29,6 +30,7 @@ class CombinedTest extends TestCase
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/tried to read unknown property/');
 
+        /** @noinspection PhpExpressionResultUnusedInspection */
         $obj->propertY;
     }
 
@@ -93,4 +95,17 @@ class CombinedTest extends TestCase
         $this->assertEquals($parentPropertyValue, $parent->parentProperty);
     }
 
+    public function test_named_arguments_to_accessor_method_dont_emit_warnings()
+    {
+        $obj = new #[Get,Set] class {
+            use GetSetTrait;
+
+            protected string $a = 'some value';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/missing argument/');
+
+        $obj->set(a: 'newvalue');
+    }
 }
