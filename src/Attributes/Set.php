@@ -17,7 +17,7 @@ use Attribute;
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
 class Set extends Base
 {
-    protected $mutator;
+    protected ?string $mutator;
 
     public function __construct(?bool $enabled = true, string $mutator = null)
     {
