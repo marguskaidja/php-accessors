@@ -12,8 +12,8 @@ declare(strict_types=1);
 
 namespace margusk\GetSet;
 
-use margusk\GetSet\Exceptions\BadMethodCallException;
-use margusk\GetSet\Exceptions\InvalidArgumentException;
+use margusk\GetSet\Exception\BadMethodCallException;
+use margusk\GetSet\Exception\InvalidArgumentException;
 
 trait GetSetTrait
 {
@@ -45,12 +45,7 @@ trait GetSetTrait
             && ($accessorMethodIsSetOrWith || 'unset' === $accessorMethod)
         ) {
             if ($nArgs > 1) {
-                throw new InvalidArgumentException(
-                    sprintf(
-                        'when first argument is Array then there can\'t be more arguments to method %s()',
-                        $method
-                    )
-                );
+                throw InvalidArgumentException::dueMultiPropertyAccessorCanHaveExactlyOneArgument($method);
             }
 
             $accessorProperties = array_shift($args);
@@ -70,7 +65,7 @@ trait GetSetTrait
 
         // Accessor method must be resolved at this point, or we fail
         if (null === $accessorMethod) {
-            throw new BadMethodCallException(sprintf('unknown method %s()', $method));
+            throw BadMethodCallException::dueUnknownAccessorMethod($method);
         }
 
         $getPropertyConfFunc = null;
@@ -80,20 +75,15 @@ trait GetSetTrait
         if (0 === count($accessorProperties)) {
             if ('' === $propertyName) {
                 if (!count($args)) {
-                    throw new InvalidArgumentException(
-                        sprintf('missing argument #1 (property name) to method %s()', $method)
-                    );
+                    throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument($method);
                 }
 
                 $propertyName = array_shift($args);
 
                 if (!is_string($propertyName)) {
-                    throw new InvalidArgumentException(
-                        sprintf(
-                            'expecting string as argument #%u (property value) to method %s()',
-                            count($args) + 1,
-                            $method
-                        )
+                    throw InvalidArgumentException::duePropertyNameArgumentMustBeString(
+                        $method,
+                        count($args) + 1
                     );
                 }
             } else {
@@ -104,8 +94,9 @@ trait GetSetTrait
 
             if ($accessorMethodIsSetOrWith) {
                 if (!count($args)) {
-                    throw new InvalidArgumentException(
-                        sprintf('missing argument #%u (property value) to method %s()', $nArgs + 1, $method)
+                    throw InvalidArgumentException::dueMethodIsMissingPropertyValueArgument(
+                        $method,
+                        $nArgs + 1
                     );
                 }
 
@@ -114,8 +105,9 @@ trait GetSetTrait
 
             // Fail if there are more arguments specified than we are willing to process
             if (count($args)) {
-                throw new InvalidArgumentException(
-                    sprintf('expecting exactly %u argument(s) to method %s()', $nArgs - count($args), $method)
+                throw InvalidArgumentException::dueMethodHasMoreArgumentsThanExpected(
+                    $method,
+                    $nArgs - count($args)
                 );
             }
 
@@ -149,17 +141,11 @@ trait GetSetTrait
                 if (($immutable === true && 'set' === $accessorMethod)
                     || ($immutable === false && 'with' === $accessorMethod)
                 ) {
-                    throw new BadMethodCallException(
-                        sprintf(
-                            'property "%s" is %s, but method %s() is available only for %s properties (use %s::%s() instead)',
-                            $propertyName,
-                            ($immutable ? 'immutable' : 'mutable'),
-                            $method,
-                            ($immutable ? 'mutable' : 'immutable'),
-                            static::class,
-                            ($immutable ? 'with' : 'set')
-                        )
-                    );
+                    if ($immutable) {
+                        throw BadMethodCallException::dueImmutablePropertiesMustBeCalledUsingWith($propertyName);
+                    } else {
+                        throw BadMethodCallException::dueMutablePropertiesMustBeCalledUsingSet($propertyName);
+                    }
                 }
 
                 $result = $classConf['setImpl']($result, $accessorMethod, $propertyName, $propertyValue, $propertyConf);
@@ -190,14 +176,7 @@ trait GetSetTrait
         $immutable = $propertyConf['immutable'] ?? false;
 
         if ($immutable) {
-            throw new BadMethodCallException(
-                sprintf(
-                    'immutable property "%s" can\'t be set using assignment operator (use %s::with%s() instead)',
-                    $property,
-                    static::class,
-                    ucfirst($property)
-                )
-            );
+            throw BadMethodCallException::dueImmutablePropertiesCantBeSetUsingAssignmentOperator($property);
         }
 
         $classConf['setImpl']($this, 'set', $property, $value, $propertyConf);

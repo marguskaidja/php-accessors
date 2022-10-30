@@ -13,8 +13,8 @@ declare(strict_types=1);
 namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\{ICase as CI, Get, Set};
-use margusk\GetSet\Exceptions\BadMethodCallException;
-use margusk\GetSet\Exceptions\InvalidArgumentException;
+use margusk\GetSet\Exception\BadMethodCallException;
+use margusk\GetSet\Exception\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
 
 class CombinedTest extends TestCase
@@ -27,8 +27,8 @@ class CombinedTest extends TestCase
             protected string $PropertY = 'some value';
         };
 
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('/tried to read unknown property/');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/tried to get unknown property/');
 
         /** @noinspection PhpExpressionResultUnusedInspection */
         $obj->propertY;
@@ -42,8 +42,8 @@ class CombinedTest extends TestCase
             protected string $PropertY = 'some value';
         };
 
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('/tried to read unknown property/');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/tried to get unknown property/');
 
         $obj->get('PROPerty');
     }
@@ -95,17 +95,26 @@ class CombinedTest extends TestCase
         $this->assertEquals($parentPropertyValue, $parent->parentProperty);
     }
 
-    public function test_named_arguments_to_accessor_method_dont_emit_warnings()
+    public function test_named_arguments_to_accessor_method_are_handled()
     {
         $obj = new #[Get,Set] class {
             use GetSetTrait;
 
             protected string $a = 'some value';
+
+            public function getAValue(): string
+            {
+                return $this->a;
+            }
         };
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches('/missing argument/');
+        $expectedValue = 'new value';
 
-        $obj->set(a: 'newvalue');
+        $obj->set(a: ['a' => $expectedValue]);
+
+        $this->assertEquals(
+            $expectedValue,
+            $obj->getAValue()
+        );
     }
 }

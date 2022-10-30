@@ -14,7 +14,8 @@ namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\Set;
 use margusk\GetSet\Attributes\Immutable;
-use margusk\GetSet\Exceptions\BadMethodCallException;
+use margusk\GetSet\Exception\BadMethodCallException;
+use margusk\GetSet\Exception\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
 
 class WithTest extends TestCase
@@ -38,6 +39,7 @@ class WithTest extends TestCase
 
     public function test_direct_assignment_must_fail()
     {
+        /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set,Immutable] class('old value') {
             use GetSetTrait;
 
@@ -64,7 +66,7 @@ class WithTest extends TestCase
             ) {
             }
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -89,10 +91,11 @@ class WithTest extends TestCase
 
             public function equals(self $other): bool
             {
+                /** @noinspection PhpStrictComparisonWithOperandsOfDifferentTypesInspection */
                 return  $this === $other;
             }
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
@@ -118,6 +121,7 @@ class WithTest extends TestCase
 
             public function equals(self $other): bool
             {
+                /** @noinspection PhpStrictComparisonWithOperandsOfDifferentTypesInspection */
                 return  $this === $other;
             }
 
@@ -155,14 +159,14 @@ class WithTest extends TestCase
 
             protected string $p1;
 
-            public function withP1($value)
+            public function withP1($value): static
             {
                 $obj = clone $this;
                 $obj->p1 = self::EXPECTED_VALUE;
                 return $obj;
             }
 
-            public function getP1value()
+            public function getP1value(): string
             {
                 return $this->p1;
             }

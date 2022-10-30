@@ -18,7 +18,7 @@ use margusk\GetSet\Attributes\Get;
 use margusk\GetSet\Attributes\ICase;
 use margusk\GetSet\Attributes\Immutable;
 use margusk\GetSet\Attributes\Set;
-use margusk\GetSet\Exceptions\BadMethodCallException;
+use margusk\GetSet\Exception\InvalidArgumentException;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionProperty;
@@ -232,13 +232,11 @@ final class Core
     {
         return (function (object $object, string $property, ?array $propertyConf): mixed {
             if (!isset($propertyConf)) {
-                throw new BadMethodCallException(sprintf('tried to read unknown property "%s"', $property));
+                throw InvalidArgumentException::dueTriedToGetUnknownProperty($property);
             }
 
             if (!$propertyConf['get']) {
-                throw new BadMethodCallException(
-                    sprintf('tried to read private/protected property "%s" (missing #[Get] attribute?)', $property)
-                );
+                throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty($property);
             }
 
             if (isset($propertyConf['existingMethods']['get'])) {
@@ -259,13 +257,11 @@ final class Core
             ?array $propertyConf
         ) use ($curClassName): object {
             if (!$propertyConf) {
-                throw new BadMethodCallException(sprintf('tried to set unknown property "%s"', $property));
+                throw InvalidArgumentException::dueTriedToSetUnknownProperty($property);
             }
 
             if (!$propertyConf['set']) {
-                throw new BadMethodCallException(
-                    sprintf('tried to set private/protected property "%s" (missing #[Set] attribute?)', $property)
-                );
+                throw InvalidArgumentException::dueTriedToSetMisconfiguredProperty($property);
             }
 
             if (isset($propertyConf['existingMethods'][$accessorMethod])) {
@@ -297,22 +293,15 @@ final class Core
     {
         return (function (object $object, string $property, ?array $propertyConf): object {
             if (!$propertyConf) {
-                throw new BadMethodCallException(sprintf('tried to unset unknown property "%s"', $property));
+                throw InvalidArgumentException::dueTriedToUnsetUnknownProperty($property);
             }
 
             if (!$propertyConf['unset']) {
-                throw new BadMethodCallException(
-                    sprintf('tried to unset private/protected property "%s" (missing #[Delete] attribute?)', $property)
-                );
+                throw InvalidArgumentException::dueTriedToUnsetMisconfiguredProperty($property);
             }
 
             if ($propertyConf['immutable']) {
-                throw new BadMethodCallException(
-                    sprintf(
-                        'immutable property "%s" can\'t be unset',
-                        $property
-                    )
-                );
+                throw InvalidArgumentException::dueImmutablePropertyCantBeUnset($property);
             }
 
             if (isset($propertyConf['existingMethods']['unset'])) {
@@ -329,13 +318,11 @@ final class Core
     {
         return (function (object $object, string $property, ?array $propertyConf): bool {
             if (!isset($propertyConf)) {
-                throw new BadMethodCallException(sprintf('tried to query unknown property "%s"', $property));
+                throw InvalidArgumentException::dueTriedToGetUnknownProperty($property);
             }
 
             if (!$propertyConf['get']) {
-                throw new BadMethodCallException(
-                    sprintf('tried to query private/protected property "%s" (missing #[Get] attribute?)', $property)
-                );
+                throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty($property);
             }
 
             if (isset($propertyConf['existingMethods']['isset'])) {

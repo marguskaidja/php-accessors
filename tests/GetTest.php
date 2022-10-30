@@ -13,7 +13,8 @@ declare(strict_types=1);
 namespace margusk\GetSet\Tests;
 
 use margusk\GetSet\Attributes\Get;
-use margusk\GetSet\Exceptions\BadMethodCallException;
+use margusk\GetSet\Exception\BadMethodCallException;
+use margusk\GetSet\Exception\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
 
 class GetTest extends TestCase
@@ -73,8 +74,8 @@ class GetTest extends TestCase
             protected string $p2 = 'this is another protected value';
         };
 
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('|tried to read private/protected property|');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to get misconfigured property|');
 
         $obj->getP2();
     }
@@ -87,9 +88,10 @@ class GetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('|tried to read unknown property|');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to get unknown property|');
 
+        /** @noinspection PhpExpressionResultUnusedInspection */
         $obj->p2;
     }
 
@@ -101,8 +103,8 @@ class GetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('|tried to read unknown property|');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to get unknown property|');
 
         $obj->getP2();
     }
@@ -150,7 +152,7 @@ class GetTest extends TestCase
 
             protected string $p1 = 'starting value';
 
-            public function getP1()
+            public function getP1(): string
             {
                 return 'value from getter';
             }
@@ -166,7 +168,7 @@ class GetTest extends TestCase
 
             protected string $p1 = 'starting value';
 
-            public function issetP1()
+            public function issetP1(): bool
             {
                 return false;
             }

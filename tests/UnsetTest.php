@@ -15,7 +15,8 @@ namespace margusk\GetSet\Tests;
 use margusk\GetSet\Attributes\Delete;
 use margusk\GetSet\Attributes\Get;
 use margusk\GetSet\Attributes\Immutable;
-use margusk\GetSet\Exceptions\BadMethodCallException;
+use margusk\GetSet\Exception\BadMethodCallException;
+use margusk\GetSet\Exception\InvalidArgumentException;
 use margusk\GetSet\GetSetTrait;
 
 class UnsetTest extends TestCase
@@ -36,14 +37,14 @@ class UnsetTest extends TestCase
 
     public function test_unset_langconstruct_should_fail_protected_property()
     {
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('|tried to unset private/protected property|');
-
         $obj = new class {
             use GetSetTrait;
 
             protected string $p1 = 'initial value';
         };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to unset misconfigured property|');
 
         unset($obj->p1);
     }
@@ -64,14 +65,14 @@ class UnsetTest extends TestCase
 
     public function test_unset_method_should_fail_protected_property()
     {
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('|tried to unset private/protected property|');
-
         $obj = new class {
             use GetSetTrait;
 
             protected string $p1 = 'initial value';
         };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to unset misconfigured property|');
 
         $obj->unsetP1();
     }
@@ -84,7 +85,7 @@ class UnsetTest extends TestCase
             #[Get, Delete]
             protected string $p1 = 'initial value';
 
-            public function unsetP1()
+            public function unsetP1(): void
             {
             }
         };
@@ -105,14 +106,14 @@ class UnsetTest extends TestCase
             ) {
             }
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
         };
 
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('|' . preg_quote('can\'t be unset', '|') . '|');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|immutable property .+ can\'t be unset|');
 
         unset($obj->p1);
     }
@@ -128,14 +129,14 @@ class UnsetTest extends TestCase
             ) {
             }
 
-            public function getP1Value()
+            public function getP1Value(): string
             {
                 return $this->p1;
             }
         };
 
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('|' . preg_quote('can\'t be unset', '|') . '|');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|immutable property .+ can\'t be unset|');
 
         $obj->unset('p1');
     }
@@ -150,7 +151,7 @@ class UnsetTest extends TestCase
             protected string $p2 = 'initialized3';
             protected string $p3 = 'initialized4';
 
-            public function issetPropertyValue(string $propertyName)
+            public function issetPropertyValue(string $propertyName): bool
             {
                 return isset($this->{$propertyName});
             }
