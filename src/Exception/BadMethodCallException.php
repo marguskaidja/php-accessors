@@ -12,18 +12,18 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Exception;
 
-class BadMethodCallException extends \BadMethodCallException
+final class BadMethodCallException extends \BadMethodCallException
 {
     public static function dueUnknownAccessorMethod(string $class, string $method): static
     {
-        return new static(
+        return new self(
             sprintf('unknown accessor method %s::%s()', $class, $method)
         );
     }
 
     public static function dueMutablePropertiesMustBeCalledUsingSet(string $class, string $propertyName): static
     {
-        return new static(
+        return new self(
             sprintf(
                 'property "%s::$%s" is mutable, but method with() is available only for immutable properties (use set() instead)',
                 $class,
@@ -34,7 +34,7 @@ class BadMethodCallException extends \BadMethodCallException
 
     public static function dueImmutablePropertiesMustBeCalledUsingWith(string $class, string $propertyName): static
     {
-        return new static(
+        return new self(
             sprintf(
                 'property "%s::$%s" is immutable, but method set() is available only for mutable properties (use with() instead)',
                 $class,
@@ -45,7 +45,7 @@ class BadMethodCallException extends \BadMethodCallException
 
     public static function dueImmutablePropertiesCantBeSetUsingAssignmentOperator(string $class, string $propertyName): static
     {
-        return new static(
+        return new self(
             sprintf(
                 'immutable property "%s::$%s" can\'t be set using assignment operator (use with%s() method instead)',
                 $class,
