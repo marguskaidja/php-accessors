@@ -14,6 +14,13 @@ namespace margusk\Accessors\Exception;
 
 final class InvalidArgumentException extends \InvalidArgumentException
 {
+    /**
+     * @param  string   $class
+     * @param  string   $property
+     * @param  string[] $callable
+     *
+     * @return static
+     */
     public static function dueInvalidMutatorCallback(string $class, string $property, array $callable): static
     {
         return new self(
