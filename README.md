@@ -1,20 +1,22 @@
 [![Tests](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml/badge.svg)](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml)
 # Accessors
 
-This library can provide automatic accessors for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class. Then, in case an protected (inaccessible) property is accessed in this class, it intervenes and handles situation depending of configuration.
+This library can provide automatic accessors for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class.
+
+Then, in case `protected`  property (_inaccessible for outside world_) is beeing accessed, property overloader will intervene and handle the situation depending of configuration.
 
 Following features are present:
-* Accessors with various syntax:
+* Various syntax to choose from:
   * direct assignment syntax:
     * `$value = $foo->property`
     * `$foo->property = 'value'`
-  * methods:
+  * method syntax:
     * `$value = $foo->get('property')`
     * `$foo->setProperty('value')`
     * `$foo->set('property1', 'value1')`
     * `$foo->set(['property1' => 'value1', 'property2' => 'value2'])`
 * All properties in a class can be marked accessible at once or one-by-one.
-* Easy configuration syntax, done **purely** using [PHP attributes](https://www.php.net/manual/en/language.attributes.overview.php), which is native, fast and involves no DocBlock parsing. Also, no potentially conflicting data has to be injected into the class nor custom initialization code to be called to make things work.
+* Easy and unbloated configuration, implemented purely using [Attributes](https://www.php.net/manual/en/language.attributes.overview.php), which is native, fast and involves no DocBlock parsing. Also, no potentially conflicting data has to be injected into the class nor custom initialization code to be called to make things work.
 * _Weak_ immutability support backed by _wither_ methods.
 * Mutator support for _setters_.
 
@@ -65,7 +67,7 @@ echo $a->getProp3() . "\n";  // Outputs "value3"
 ```
 This has boilerplate code just to make 3 properties readable. In case there are tens of properties things could get quite tedious.
 
-Using **Accessible** trait class `A` above can be rewritten:
+By using `Accessible` trait this class can be rewritten:
 
 ```php
 use margusk\Accessors\Attributes\Get;
@@ -164,9 +166,11 @@ $a->setProp2("new value2");                     // Throws InvalidArgumentExcepti
 
 Objects which allow their contents to be changed are named as **mutable**. And in contrast the ones who don't are [**immutable**](https://en.wikipedia.org/wiki/Immutable_object).
 
-When talking about immutability, then it usually means that while restricting the changes inside the original object, there must be a way to make a copy of the object with desired changes. This way original object stays intact and cloned object with changes can be used for new operations. 
+When talking about immutability, then it usually means combination of restricting the changes inside the original object, but allowing to make a copy of the object with desired changes.
 
-Consider following naive situation:
+This way original object stays intact and cloned object with changes can be used for new operations. 
+
+Consider following situation:
 ```php
 use margusk\Accessors\Attributes\Get;
 use margusk\Accessors\Accessible;
@@ -191,13 +195,15 @@ class A
 // Configure object $a
 $a = new A(1, 2, 3, 4, 5, 6);
 
-// Configure object $b, which differs from $a only by single value (property $f).
-// But to achieve this, we have to retrieve all the rest of the values from object $a and pass to constructor to create new object. 
-// This can result in bloated and complex code.
+// Configure object $b, which differs from $a only by single value (property A::$f).
+// But to achieve this, we have to retrieve all the rest of the values from object $a and
+// pass to constructor to create new object.
+// 
+// This can result in unnecessary complexity.
 $b = new B($a->a, $a->b,  $a->c,  $a->d,  $a->e,  7);
 ```
 
-With `#[Immutable]` flag things get a lot simpler:
+With `#[Immutable]` flag things can be written more simpler:
 ```php
 use margusk\Accessors\Attributes\{
     Get, Set, Immutable
@@ -241,7 +247,7 @@ echo $b->f; // Outputs "7"
 ```
 
 Notes:
-* Immutability here is weakly implemented, not to be confused with [strong immutability](https://en.wikipedia.org/wiki/Immutable_object#Weak_vs_strong_immutability). For example:
+* Immutability here is implemented _weakly_, not to be confused with [strong immutability](https://en.wikipedia.org/wiki/Immutable_object#Weak_vs_strong_immutability). For example:
     * There's no rule how much of the object should be made immutable. It can be only one property or whole object (all properties) if wanted.  
     * Nested immutability is not enforced, thus property can contain another mutable object.
     * Immutable properties can be still changed inside the owner object.
@@ -273,17 +279,14 @@ echo (new A())->setProp1('<>')->getProp1();  // Outputs "&lt;&gt;"
 
 It can validate and/or tweak the value before beeing assigned to property.
 
-_Mutator_ parameter must be string and can contain function/method name in format:
-* `<function>`
-* `$this-><method>`
-* `<class>::<method>`
-* `self::<method>` (NB! can be used only with static class methods)
-* `parent::<method>` (NB! can be used only with static class methods)
-* `static::<method>`
+_Mutator_ parameter must be string or array representing a PHP callable. Following callable syntaxes are supported:
+1. `<function>` 
+1. `<class>::<method>` 
+1. `$this-><method>` (`$this` is replaced in runtime with the object instance in which context the accessor is currently executing)
 
-It can contain a special variable named `%property%` which is replaced by the property name it applies. This is useful only when specifying mutator globally in class attribute.
+It can contain a special variable named `%property%` which is replaced during parsing phase with the property name it applies. This is useful only when specifying mutator globally in class attribute.
 
-Specified callback must accept assignable value as first parameter and must return a value to be assigned to property.
+Specified callable must accept assignable value as first parameter and must return a value to be assigned to property.
 
 ### Unsetting property
 
@@ -440,7 +443,7 @@ However the recommended way is leave the case-sensitivity on and always access t
 
 Using magic methods brings the disadvantages of losing IDE autocompletion and make static code analyzers grope in the dark.
 
-To inform IDE about magic methods and properties, PHPDoc [@method](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/method.html) and/or [@property](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) tags can be specified in front of the class:
+To inform static code parsers about available magic methods and properties, PHPDoc [@method](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/method.html) and/or [@property](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) tags can be specified in front of the class:
 ```php
 use margusk\Accessors\Attributes\{
     Get, Set
