@@ -10,16 +10,24 @@
 
 declare(strict_types=1);
 
-namespace margusk\GetSet;
+namespace margusk\Accessors;
 
-use margusk\GetSet\Exception\BadMethodCallException;
-use margusk\GetSet\Exception\InvalidArgumentException;
+use margusk\Accessors\Exception\BadMethodCallException;
+use margusk\Accessors\Exception\InvalidArgumentException;
+use ReflectionException;
 
-trait GetSetTrait
+trait Accessible
 {
+    /**
+     * @param  string  $method
+     * @param  array   $args
+     *
+     * @return mixed
+     * @throws ReflectionException
+     */
     public function __call(string $method, array $args): mixed
     {
-        $classConf = Core::loadConfiguration(static::class);
+        $classConf = Configuration::load(static::class);
 
         $lcaseMethod = strtolower($method);
 
@@ -161,17 +169,30 @@ trait GetSetTrait
         return $result;
     }
 
+    /**
+     * @param  string  $property
+     *
+     * @return mixed
+     * @throws ReflectionException
+     */
     public function __get(string $property): mixed
     {
-        $classConf = Core::loadConfiguration(static::class);
+        $classConf = Configuration::load(static::class);
         $propertyConf = $classConf['getPropertyConf']($property);
 
         return $classConf['getImpl']($this, $property, $propertyConf);
     }
 
+    /**
+     * @param  string  $property
+     * @param  mixed   $value
+     *
+     * @return void
+     * @throws ReflectionException
+     */
     public function __set(string $property, mixed $value): void
     {
-        $classConf = Core::loadConfiguration(static::class);
+        $classConf = Configuration::load(static::class);
         $propertyConf = $classConf['getPropertyConf']($property);
         $immutable = $propertyConf['immutable'] ?? false;
 
@@ -182,17 +203,29 @@ trait GetSetTrait
         $classConf['setImpl']($this, 'set', $property, $value, $propertyConf);
     }
 
+    /**
+     * @param  string  $property
+     *
+     * @return bool
+     * @throws ReflectionException
+     */
     public function __isset(string $property): bool
     {
-        $classConf = Core::loadConfiguration(static::class);
+        $classConf = Configuration::load(static::class);
         $propertyConf = $classConf['getPropertyConf']($property);
 
         return $classConf['issetImpl']($this, $property, $propertyConf);
     }
 
+    /**
+     * @param  string  $property
+     *
+     * @return void
+     * @throws ReflectionException
+     */
     public function __unset(string $property): void
     {
-        $classConf = Core::loadConfiguration(static::class);
+        $classConf = Configuration::load(static::class);
         $propertyConf = $classConf['getPropertyConf']($property);
 
         $classConf['unsetImpl']($this, $property, $propertyConf);

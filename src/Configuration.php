@@ -10,24 +10,35 @@
 
 declare(strict_types=1);
 
-namespace margusk\GetSet;
+namespace margusk\Accessors;
 
 use Closure;
-use margusk\GetSet\Attributes\Delete;
-use margusk\GetSet\Attributes\Get;
-use margusk\GetSet\Attributes\ICase;
-use margusk\GetSet\Attributes\Immutable;
-use margusk\GetSet\Attributes\Set;
-use margusk\GetSet\Exception\InvalidArgumentException;
+use margusk\Accessors\Attributes\Delete;
+use margusk\Accessors\Attributes\Get;
+use margusk\Accessors\Attributes\ICase;
+use margusk\Accessors\Attributes\Immutable;
+use margusk\Accessors\Attributes\Set;
+use margusk\Accessors\Exception\InvalidArgumentException;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionProperty;
+use ReflectionException;
 
-final class Core
+final class Configuration
 {
     private static array $propertiesConf = [];
 
-    public static function loadConfiguration(string $curClassName): array
+    /**
+     * Parses configuration of specified class.
+     *
+     * Configuration is cached so later requests for same class are returned instantly.
+     *
+     * @param  string  $curClassName
+     *
+     * @return array
+     * @throws ReflectionException
+     */
+    public static function load(string $curClassName): array
     {
         if (!isset(self::$propertiesConf[$curClassName]['byCase'])) {
             self::$propertiesConf[$curClassName] = array_merge(self::$propertiesConf[$curClassName] ?? [], [
@@ -121,7 +132,6 @@ final class Core
 
                 foreach ($classNames as $className) {
                     if (!isset(self::$propertiesConf[$className]['attributes'])) {
-                        /** @noinspection PhpUnhandledExceptionInspection */
                         $classAttr = $parseAttributes(new ReflectionClass($className));
 
                         $mergedClassAttr = $mergeAttributes($mergedClassAttr, $classAttr);
@@ -132,7 +142,6 @@ final class Core
                 }
             }
 
-            /** @noinspection PhpUnhandledExceptionInspection */
             $reflectionClass = new ReflectionClass($curClassName);
 
             // Find all existing "set<Property>", "get<Property>", "isset<Property>" and "unset<Property>" methods for
