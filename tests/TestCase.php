@@ -10,14 +10,19 @@
 
 declare(strict_types=1);
 
-namespace margusk\GetSet\Tests;
+namespace margusk\Accessors\Tests;
 
 use PHPUnit\Framework\Constraint\LogicalNot;
 use PHPUnit\Framework\TestCase as TestCaseBase;
 
 class TestCase extends TestCaseBase
 {
-    public static function assertNotObjectEquals(object $expected, object $actual, string $method = 'equals', string $message = ''): void
+    public static function assertNotObjectEquals(
+        object $expected,
+        object $actual,
+        string $method = 'equals',
+        string $message = ''
+    ): void
     {
         static::assertThat(
             $actual,

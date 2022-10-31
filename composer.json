@@ -1,8 +1,17 @@
 {
-    "name": "margusk/getset",
-    "description": "Automatic getters and setters for PHP classes",
+    "name": "margusk/accessors",
+    "description": "Provides automatic property accessors (setters/getters) with immutability support",
     "type": "library",
-    "keywords": ["getter", "setter", "getters", "setters"],
+    "keywords": [
+        "getter",
+        "setter",
+        "getters",
+        "setters",
+        "immutable",
+        "accessors",
+        "property",
+        "properties"
+    ],
     "authors": [
         {
             "name": "Margus Kaidja",
@@ -18,12 +27,12 @@
     },
     "autoload": {
         "psr-4": {
-            "margusk\\GetSet\\": "src/"
+            "margusk\\Accessors\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "margusk\\GetSet\\Tests\\": "tests/"
+            "margusk\\Accessors\\Tests\\": "tests/"
         }
     }
 }

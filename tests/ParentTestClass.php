@@ -10,17 +10,17 @@
 
 declare(strict_types=1);
 
-namespace margusk\GetSet\Tests;
+namespace margusk\Accessors\Tests;
 
-use margusk\GetSet\Attributes\Delete;
-use margusk\GetSet\Attributes\Get;
-use margusk\GetSet\Attributes\Set;
-use margusk\GetSet\GetSetTrait;
+use margusk\Accessors\Attributes\Delete;
+use margusk\Accessors\Attributes\Get;
+use margusk\Accessors\Attributes\Set;
+use margusk\Accessors\Accessible;
 
 #[Get, Set, Delete]
 class ParentTestClass
 {
-    use GetSetTrait;
+    use Accessible;
 
     protected string $parentProperty;
 

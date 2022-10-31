@@ -10,7 +10,7 @@
 
 declare(strict_types=1);
 
-namespace margusk\GetSet\Exception;
+namespace margusk\Accessors\Exception;
 
 class BadMethodCallException extends \BadMethodCallException
 {

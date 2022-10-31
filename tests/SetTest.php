@@ -10,12 +10,11 @@
 
 declare(strict_types=1);
 
-namespace margusk\GetSet\Tests;
+namespace margusk\Accessors\Tests;
 
-use margusk\GetSet\Attributes\Set;
-use margusk\GetSet\Exception\BadMethodCallException;
-use margusk\GetSet\Exception\InvalidArgumentException;
-use margusk\GetSet\GetSetTrait;
+use margusk\Accessors\Attributes\Set;
+use margusk\Accessors\Exception\InvalidArgumentException;
+use margusk\Accessors\Accessible;
 use TypeError;
 
 class SetTest extends TestCase
@@ -23,7 +22,7 @@ class SetTest extends TestCase
     public function test_set_should_update_value_with_property_attribute()
     {
         $obj = new class {
-            use GetSetTrait;
+            use Accessible;
 
             #[Set]
             protected string $p1;
@@ -54,7 +53,7 @@ class SetTest extends TestCase
     public function test_set_should_update_value_with_class_attribute()
     {
         $obj = new #[Set] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
 
@@ -84,7 +83,7 @@ class SetTest extends TestCase
     public function test_set_should_update_value_with_property_attribute_override()
     {
         $obj = new #[Set(false)] class {
-            use GetSetTrait;
+            use Accessible;
 
             #[Set(true)]
             protected string $p1;
@@ -115,7 +114,7 @@ class SetTest extends TestCase
     public function test_set_should_update_multiple_values()
     {
         $obj = new #[Set] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p0 = 'empty';
             protected string $p1 = 'empty';
@@ -147,7 +146,7 @@ class SetTest extends TestCase
     public function test_mutator_function_must_be_called_in_setter()
     {
         $obj = new #[Set(true, "htmlspecialchars")] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
 
@@ -165,7 +164,7 @@ class SetTest extends TestCase
     public function test_class_mutator_method_with_property_substition_must_be_called()
     {
         $obj = new #[Set(true, "self::staticMutate%property%")] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
 
@@ -188,7 +187,7 @@ class SetTest extends TestCase
     public function test_parentclass_mutator_method_with_property_substition_must_be_called()
     {
         $obj = new #[Set(true, "parent::staticMutate%property%")] class extends ParentTestClass {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
 
@@ -212,7 +211,7 @@ class SetTest extends TestCase
     {
         /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set(true, "self::nonStaticMutate")] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
 
@@ -236,7 +235,7 @@ class SetTest extends TestCase
     public function test_mutator_using_parent_called_in_object_context_must_fail()
     {
         $obj = new #[Set(true, "parent::nonStaticMutate")] class extends ParentTestClass {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
 
@@ -255,7 +254,7 @@ class SetTest extends TestCase
     public function test_object_mutator_method_with_propertyname_substitution_must_be_called()
     {
         $obj = new #[Set(true, "this->mutate%property%")] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
 
@@ -278,7 +277,7 @@ class SetTest extends TestCase
     public function test_disable_mutator_with_property_attribute_override()
     {
         $obj = new #[Set(true, "htmlspecialchars")] class {
-            use GetSetTrait;
+            use Accessible;
 
             #[Set(true, "")]
             protected string $p1;
@@ -298,7 +297,7 @@ class SetTest extends TestCase
     {
         /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set(true)] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
 
@@ -316,7 +315,7 @@ class SetTest extends TestCase
     {
         /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'this is protected value';
         };
@@ -330,7 +329,7 @@ class SetTest extends TestCase
     public function test_set_should_fail_with_unknown_property_using_method_call()
     {
         $obj = new #[Set] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'this is protected value';
         };
@@ -344,7 +343,7 @@ class SetTest extends TestCase
     public function test_set_should_fail_with_unknown_property_using_method_call_with_multiple_properties()
     {
         $obj = new #[Set] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'this is protected value';
             protected string $p2 = 'this is protected value';
@@ -382,7 +381,7 @@ class SetTest extends TestCase
     public function test_honour_existing_setter_method()
     {
         $obj = new #[Set] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
 
