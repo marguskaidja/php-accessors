@@ -1,25 +1,33 @@
 <?php
 
 /**
- * This file is part of the GetSet package.
+ * This file is part of the margusk/accessors package.
  *
  * @author  Margus Kaidja <margusk@gmail.com>
- * @link    https://github.com/marguskaidja/php-getset
+ * @link    https://github.com/marguskaidja/php-accessors
  * @license http://www.opensource.org/licenses/mit-license.php MIT (see the LICENSE file)
  */
 
 declare(strict_types=1);
 
-namespace margusk\GetSet;
+namespace margusk\Accessors;
 
-use margusk\GetSet\Exception\BadMethodCallException;
-use margusk\GetSet\Exception\InvalidArgumentException;
+use margusk\Accessors\Exception\BadMethodCallException;
+use margusk\Accessors\Exception\InvalidArgumentException;
+use ReflectionException;
 
-trait GetSetTrait
+trait Accessible
 {
+    /**
+     * @param  string  $method
+     * @param  array   $args
+     *
+     * @return mixed
+     * @throws ReflectionException
+     */
     public function __call(string $method, array $args): mixed
     {
-        $classConf = Core::loadConfiguration(static::class);
+        $classConf = Configuration::load(static::class);
 
         $lcaseMethod = strtolower($method);
 
@@ -45,7 +53,10 @@ trait GetSetTrait
             && ($accessorMethodIsSetOrWith || 'unset' === $accessorMethod)
         ) {
             if ($nArgs > 1) {
-                throw InvalidArgumentException::dueMultiPropertyAccessorCanHaveExactlyOneArgument($method);
+                throw InvalidArgumentException::dueMultiPropertyAccessorCanHaveExactlyOneArgument(
+                    static::class,
+                    $method
+                );
             }
 
             $accessorProperties = array_shift($args);
@@ -65,7 +76,7 @@ trait GetSetTrait
 
         // Accessor method must be resolved at this point, or we fail
         if (null === $accessorMethod) {
-            throw BadMethodCallException::dueUnknownAccessorMethod($method);
+            throw BadMethodCallException::dueUnknownAccessorMethod(static::class, $method);
         }
 
         $getPropertyConfFunc = null;
@@ -75,13 +86,14 @@ trait GetSetTrait
         if (0 === count($accessorProperties)) {
             if ('' === $propertyName) {
                 if (!count($args)) {
-                    throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument($method);
+                    throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument(static::class, $method);
                 }
 
                 $propertyName = array_shift($args);
 
                 if (!is_string($propertyName)) {
                     throw InvalidArgumentException::duePropertyNameArgumentMustBeString(
+                        static::class,
                         $method,
                         count($args) + 1
                     );
@@ -95,6 +107,7 @@ trait GetSetTrait
             if ($accessorMethodIsSetOrWith) {
                 if (!count($args)) {
                     throw InvalidArgumentException::dueMethodIsMissingPropertyValueArgument(
+                        static::class,
                         $method,
                         $nArgs + 1
                     );
@@ -106,6 +119,7 @@ trait GetSetTrait
             // Fail if there are more arguments specified than we are willing to process
             if (count($args)) {
                 throw InvalidArgumentException::dueMethodHasMoreArgumentsThanExpected(
+                    static::class,
                     $method,
                     $nArgs - count($args)
                 );
@@ -142,9 +156,15 @@ trait GetSetTrait
                     || ($immutable === false && 'with' === $accessorMethod)
                 ) {
                     if ($immutable) {
-                        throw BadMethodCallException::dueImmutablePropertiesMustBeCalledUsingWith($propertyName);
+                        throw BadMethodCallException::dueImmutablePropertiesMustBeCalledUsingWith(
+                            static::class,
+                            $propertyName
+                        );
                     } else {
-                        throw BadMethodCallException::dueMutablePropertiesMustBeCalledUsingSet($propertyName);
+                        throw BadMethodCallException::dueMutablePropertiesMustBeCalledUsingSet(
+                            static::class,
+                            $propertyName
+                        );
                     }
                 }
 
@@ -161,38 +181,66 @@ trait GetSetTrait
         return $result;
     }
 
+    /**
+     * @param  string  $property
+     *
+     * @return mixed
+     * @throws ReflectionException
+     */
     public function __get(string $property): mixed
     {
-        $classConf = Core::loadConfiguration(static::class);
+        $classConf = Configuration::load(static::class);
         $propertyConf = $classConf['getPropertyConf']($property);
 
         return $classConf['getImpl']($this, $property, $propertyConf);
     }
 
+    /**
+     * @param  string  $property
+     * @param  mixed   $value
+     *
+     * @return void
+     * @throws ReflectionException
+     */
     public function __set(string $property, mixed $value): void
     {
-        $classConf = Core::loadConfiguration(static::class);
+        $classConf = Configuration::load(static::class);
         $propertyConf = $classConf['getPropertyConf']($property);
         $immutable = $propertyConf['immutable'] ?? false;
 
         if ($immutable) {
-            throw BadMethodCallException::dueImmutablePropertiesCantBeSetUsingAssignmentOperator($property);
+            throw BadMethodCallException::dueImmutablePropertiesCantBeSetUsingAssignmentOperator(
+                static::class,
+                $property
+            );
         }
 
         $classConf['setImpl']($this, 'set', $property, $value, $propertyConf);
     }
 
+    /**
+     * @param  string  $property
+     *
+     * @return bool
+     * @throws ReflectionException
+     */
     public function __isset(string $property): bool
     {
-        $classConf = Core::loadConfiguration(static::class);
+        $classConf = Configuration::load(static::class);
         $propertyConf = $classConf['getPropertyConf']($property);
 
         return $classConf['issetImpl']($this, $property, $propertyConf);
     }
 
+    /**
+     * @param  string  $property
+     *
+     * @return void
+     * @throws ReflectionException
+     */
     public function __unset(string $property): void
     {
-        $classConf = Core::loadConfiguration(static::class);
+        $classConf = Configuration::load(static::class);
         $propertyConf = $classConf['getPropertyConf']($property);
 
         $classConf['unsetImpl']($this, $property, $propertyConf);

@@ -1,29 +1,28 @@
 <?php
 
 /**
- * This file is part of the GetSet package.
+ * This file is part of the margusk/accessors package.
  *
  * @author  Margus Kaidja <margusk@gmail.com>
- * @link    https://github.com/marguskaidja/php-getset
+ * @link    https://github.com/marguskaidja/php-accessors
  * @license http://www.opensource.org/licenses/mit-license.php MIT (see the LICENSE file)
  */
 
 declare(strict_types=1);
 
-namespace margusk\GetSet\Tests;
+namespace margusk\Accessors\Tests;
 
-use margusk\GetSet\Attributes\Set;
-use margusk\GetSet\Attributes\Immutable;
-use margusk\GetSet\Exception\BadMethodCallException;
-use margusk\GetSet\Exception\InvalidArgumentException;
-use margusk\GetSet\GetSetTrait;
+use margusk\Accessors\Attributes\Set;
+use margusk\Accessors\Attributes\Immutable;
+use margusk\Accessors\Exception\BadMethodCallException;
+use margusk\Accessors\Accessible;
 
 class WithTest extends TestCase
 {
     public function test_set_method_must_fail()
     {
         $obj = new #[Set,Immutable] class('value') {
-            use GetSetTrait;
+            use Accessible;
 
             public function __construct(
                 protected string $p1
@@ -41,7 +40,7 @@ class WithTest extends TestCase
     {
         /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set,Immutable] class('old value') {
-            use GetSetTrait;
+            use Accessible;
 
             public function __construct(
                 protected string $p1
@@ -59,7 +58,7 @@ class WithTest extends TestCase
     {
         $oldValue = 'old value';
         $obj = new #[Set,Immutable] class($oldValue) {
-            use GetSetTrait;
+            use Accessible;
 
             public function __construct(
                 protected string $p1
@@ -82,7 +81,7 @@ class WithTest extends TestCase
         $oldValue = 'old value';
 
         $obj1 = new #[Set,Immutable] class($oldValue) {
-            use GetSetTrait;
+            use Accessible;
 
             public function __construct(
                 protected string $p1
@@ -112,7 +111,7 @@ class WithTest extends TestCase
     public function test_updating_multiple_values_should_work()
     {
         $obj1 = new #[Set,Immutable] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p0 = 'empty0';
             protected string $p1 = 'empty1';
@@ -155,7 +154,7 @@ class WithTest extends TestCase
         $obj = new #[Set,Immutable] class {
             const EXPECTED_VALUE = 'existing method called';
 
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
 

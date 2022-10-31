@@ -1,28 +1,27 @@
 <?php
 
 /**
- * This file is part of the GetSet package.
+ * This file is part of the margusk/accessors package.
  *
  * @author  Margus Kaidja <margusk@gmail.com>
- * @link    https://github.com/marguskaidja/php-getset
+ * @link    https://github.com/marguskaidja/php-accessors
  * @license http://www.opensource.org/licenses/mit-license.php MIT (see the LICENSE file)
  */
 
 declare(strict_types=1);
 
-namespace margusk\GetSet\Tests;
+namespace margusk\Accessors\Tests;
 
-use margusk\GetSet\Attributes\Get;
-use margusk\GetSet\Exception\BadMethodCallException;
-use margusk\GetSet\Exception\InvalidArgumentException;
-use margusk\GetSet\GetSetTrait;
+use margusk\Accessors\Attributes\Get;
+use margusk\Accessors\Exception\InvalidArgumentException;
+use margusk\Accessors\Accessible;
 
 class GetTest extends TestCase
 {
     public function test_get_should_return_correct_value_with_property_attribute()
     {
         $obj = new class {
-            use GetSetTrait;
+            use Accessible;
 
             #[Get]
             protected string $p1 = 'this is protected value';
@@ -37,7 +36,7 @@ class GetTest extends TestCase
     public function test_get_should_return_correct_value_with_class_attribute()
     {
         $obj = new #[Get] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'this is protected value';
         };
@@ -51,7 +50,7 @@ class GetTest extends TestCase
     public function test_get_should_return_correct_value_with_property_attribute_override()
     {
         $obj = new #[Get(false)] class {
-            use GetSetTrait;
+            use Accessible;
 
             #[Get(true)]
             protected string $p1 = 'this is protected value';
@@ -66,7 +65,7 @@ class GetTest extends TestCase
     public function test_get_should_fail_with_protected_property()
     {
         $obj = new #[Get(true)] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'this is protected value';
 
@@ -83,7 +82,7 @@ class GetTest extends TestCase
     public function test_get_should_fail_with_unknown_property_using_direct_access()
     {
         $obj = new #[Get] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'this is protected value';
         };
@@ -98,7 +97,7 @@ class GetTest extends TestCase
     public function test_get_should_fail_with_unknown_property_using_method_call()
     {
         $obj = new #[Get] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'this is protected value';
         };
@@ -112,7 +111,7 @@ class GetTest extends TestCase
     public function test_isset_should_return_false_for_uninitialized_property()
     {
         $obj = new #[Get] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1;
         };
@@ -124,7 +123,7 @@ class GetTest extends TestCase
     public function test_isset_should_return_true_for_initialized_property()
     {
         $obj = new #[Get] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'initialized';
         };
@@ -148,7 +147,7 @@ class GetTest extends TestCase
     public function test_honour_existing_getter_method()
     {
         $obj = new #[Get] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'starting value';
 
@@ -164,7 +163,7 @@ class GetTest extends TestCase
     public function test_honour_existing_isset_method()
     {
         $obj = new #[Get] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'starting value';
 

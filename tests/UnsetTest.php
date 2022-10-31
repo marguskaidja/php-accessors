@@ -1,30 +1,29 @@
 <?php
 
 /**
- * This file is part of the GetSet package.
+ * This file is part of the margusk/accessors package.
  *
  * @author  Margus Kaidja <margusk@gmail.com>
- * @link    https://github.com/marguskaidja/php-getset
+ * @link    https://github.com/marguskaidja/php-accessors
  * @license http://www.opensource.org/licenses/mit-license.php MIT (see the LICENSE file)
  */
 
 declare(strict_types=1);
 
-namespace margusk\GetSet\Tests;
+namespace margusk\Accessors\Tests;
 
-use margusk\GetSet\Attributes\Delete;
-use margusk\GetSet\Attributes\Get;
-use margusk\GetSet\Attributes\Immutable;
-use margusk\GetSet\Exception\BadMethodCallException;
-use margusk\GetSet\Exception\InvalidArgumentException;
-use margusk\GetSet\GetSetTrait;
+use margusk\Accessors\Attributes\Delete;
+use margusk\Accessors\Attributes\Get;
+use margusk\Accessors\Attributes\Immutable;
+use margusk\Accessors\Exception\InvalidArgumentException;
+use margusk\Accessors\Accessible;
 
 class UnsetTest extends TestCase
 {
     public function test_unset_langconstruct_should_uninitialize_property()
     {
         $obj = new class {
-            use GetSetTrait;
+            use Accessible;
 
             #[Get, Delete]
             protected string $p1 = 'initial value';
@@ -38,7 +37,7 @@ class UnsetTest extends TestCase
     public function test_unset_langconstruct_should_fail_protected_property()
     {
         $obj = new class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'initial value';
         };
@@ -52,7 +51,7 @@ class UnsetTest extends TestCase
     public function test_unset_method_should_uninitialize_property()
     {
         $obj = new class {
-            use GetSetTrait;
+            use Accessible;
 
             #[Get, Delete]
             protected string $p1 = 'initial value';
@@ -66,7 +65,7 @@ class UnsetTest extends TestCase
     public function test_unset_method_should_fail_protected_property()
     {
         $obj = new class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p1 = 'initial value';
         };
@@ -80,7 +79,7 @@ class UnsetTest extends TestCase
     public function test_honour_existing_unsetter_method()
     {
         $obj = new class {
-            use GetSetTrait;
+            use Accessible;
 
             #[Get, Delete]
             protected string $p1 = 'initial value';
@@ -99,7 +98,7 @@ class UnsetTest extends TestCase
     {
         $oldValue = 'old value';
         $obj = new #[Delete,Immutable] class($oldValue) {
-            use GetSetTrait;
+            use Accessible;
 
             public function __construct(
                 protected string $p1
@@ -122,7 +121,7 @@ class UnsetTest extends TestCase
     {
         $oldValue = 'old value';
         $obj = new #[Delete,Immutable] class($oldValue) {
-            use GetSetTrait;
+            use Accessible;
 
             public function __construct(
                 protected string $p1
@@ -144,7 +143,7 @@ class UnsetTest extends TestCase
     public function test_unsetting_multiple_values_should_work()
     {
         $obj = new #[Get, Delete] class {
-            use GetSetTrait;
+            use Accessible;
 
             protected string $p0 = 'initialized1';
             protected string $p1 = 'initialized2';
