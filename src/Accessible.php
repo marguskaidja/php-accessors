@@ -53,7 +53,10 @@ trait Accessible
             && ($accessorMethodIsSetOrWith || 'unset' === $accessorMethod)
         ) {
             if ($nArgs > 1) {
-                throw InvalidArgumentException::dueMultiPropertyAccessorCanHaveExactlyOneArgument($method);
+                throw InvalidArgumentException::dueMultiPropertyAccessorCanHaveExactlyOneArgument(
+                    static::class,
+                    $method
+                );
             }
 
             $accessorProperties = array_shift($args);
@@ -73,7 +76,7 @@ trait Accessible
 
         // Accessor method must be resolved at this point, or we fail
         if (null === $accessorMethod) {
-            throw BadMethodCallException::dueUnknownAccessorMethod($method);
+            throw BadMethodCallException::dueUnknownAccessorMethod(static::class, $method);
         }
 
         $getPropertyConfFunc = null;
@@ -83,13 +86,14 @@ trait Accessible
         if (0 === count($accessorProperties)) {
             if ('' === $propertyName) {
                 if (!count($args)) {
-                    throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument($method);
+                    throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument(static::class, $method);
                 }
 
                 $propertyName = array_shift($args);
 
                 if (!is_string($propertyName)) {
                     throw InvalidArgumentException::duePropertyNameArgumentMustBeString(
+                        static::class,
                         $method,
                         count($args) + 1
                     );
@@ -103,6 +107,7 @@ trait Accessible
             if ($accessorMethodIsSetOrWith) {
                 if (!count($args)) {
                     throw InvalidArgumentException::dueMethodIsMissingPropertyValueArgument(
+                        static::class,
                         $method,
                         $nArgs + 1
                     );
@@ -114,6 +119,7 @@ trait Accessible
             // Fail if there are more arguments specified than we are willing to process
             if (count($args)) {
                 throw InvalidArgumentException::dueMethodHasMoreArgumentsThanExpected(
+                    static::class,
                     $method,
                     $nArgs - count($args)
                 );
@@ -150,9 +156,15 @@ trait Accessible
                     || ($immutable === false && 'with' === $accessorMethod)
                 ) {
                     if ($immutable) {
-                        throw BadMethodCallException::dueImmutablePropertiesMustBeCalledUsingWith($propertyName);
+                        throw BadMethodCallException::dueImmutablePropertiesMustBeCalledUsingWith(
+                            static::class,
+                            $propertyName
+                        );
                     } else {
-                        throw BadMethodCallException::dueMutablePropertiesMustBeCalledUsingSet($propertyName);
+                        throw BadMethodCallException::dueMutablePropertiesMustBeCalledUsingSet(
+                            static::class,
+                            $propertyName
+                        );
                     }
                 }
 
@@ -197,7 +209,10 @@ trait Accessible
         $immutable = $propertyConf['immutable'] ?? false;
 
         if ($immutable) {
-            throw BadMethodCallException::dueImmutablePropertiesCantBeSetUsingAssignmentOperator($property);
+            throw BadMethodCallException::dueImmutablePropertiesCantBeSetUsingAssignmentOperator(
+                static::class,
+                $property
+            );
         }
 
         $classConf['setImpl']($this, 'set', $property, $value, $propertyConf);

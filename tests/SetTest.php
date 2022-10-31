@@ -163,38 +163,10 @@ class SetTest extends TestCase
 
     public function test_class_mutator_method_with_property_substition_must_be_called()
     {
-        $obj = new #[Set(true, "self::staticMutate%property%")] class {
+        $obj = new #[Set(true, [ParentTestClass::class, "staticMutate%property%"])] class {
             use Accessible;
 
             protected string $p1;
-
-            public static function staticMutateP1($value): string
-            {
-                return htmlspecialchars($value);
-            }
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        $value = '<b>GetSet</b>';
-        $obj->p1 = $value;
-        $this->assertEquals($obj::staticMutateP1($value), $obj->getP1Value());
-    }
-
-    public function test_parentclass_mutator_method_with_property_substition_must_be_called()
-    {
-        $obj = new #[Set(true, "parent::staticMutate%property%")] class extends ParentTestClass {
-            use Accessible;
-
-            protected string $p1;
-
-            public static function staticMutateP1($value): string
-            {
-                return htmlspecialchars(htmlspecialchars($value));
-            }
 
             public function getP1Value(): string
             {
@@ -207,53 +179,9 @@ class SetTest extends TestCase
         $this->assertEquals(ParentTestClass::staticMutateP1($value), $obj->getP1Value());
     }
 
-    public function test_mutator_using_self_called_in_object_context_must_fail()
-    {
-        /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
-        $obj = new #[Set(true, "self::nonStaticMutate")] class {
-            use Accessible;
-
-            protected string $p1;
-
-            public function nonStaticMutate($value): string
-            {
-                return htmlspecialchars($value);
-            }
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        $this->expectException(TypeError::class);
-        $this->expectExceptionMessageMatches('|must be a valid callback, non-static method|');
-
-        $obj->p1 = 'some value';
-    }
-
-    public function test_mutator_using_parent_called_in_object_context_must_fail()
-    {
-        $obj = new #[Set(true, "parent::nonStaticMutate")] class extends ParentTestClass {
-            use Accessible;
-
-            protected string $p1;
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        $this->expectException(TypeError::class);
-        $this->expectExceptionMessageMatches('|must be a valid callback, non-static method|');
-
-        $obj->p1 = 'some value';
-    }
-
     public function test_object_mutator_method_with_propertyname_substitution_must_be_called()
     {
-        $obj = new #[Set(true, "this->mutate%property%")] class {
+        $obj = new #[Set(true, '$this->mutate%property%')] class {
             use Accessible;
 
             protected string $p1;

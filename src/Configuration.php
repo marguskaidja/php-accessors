@@ -83,7 +83,7 @@ final class Configuration
                             if (null !== $mutator) {
                                 $conf['mutator'] = [
                                     'isset' => true,
-                                    'value' => ("" !== $mutator ? $mutator : null)
+                                    'value' => (count($mutator) > 0 ? $mutator : null)
                                 ];
                             }
                             break;
@@ -182,27 +182,54 @@ final class Configuration
                 $propertyConf['existingMethods'] = $existingMethods[$lcaseProperty] ?? [];
 
                 // Mutator methodname can be in format:
-                ///     "$this->someMethod"
+                //      "$this->someMethod"
                 //      "someFunction"
-                //      "self::someMethod"
-                //      "parent::someMethod"
-                //      "static::someMethod"
+                //      "<CLASS>::someMethod"
                 //
                 // Name can also contain special variable '%property%' which is then replaced by the appropriate
                 // property name. This is useful only when specifying mutator through class attributes.
-                if (is_string($propertyConf['mutator'])) {
-                    $propertyConf['mutator'] = str_replace('%property%', $property, $propertyConf['mutator']);
+                $mutator = $propertyConf['mutator'];
 
-                    if (preg_match("/^\\$?this->(.+)/", $propertyConf['mutator'], $matches)) {
-                        $propertyConf['mutator'] = [null, $matches[1]];
-                    } else {
-                        $splits = explode('::', $propertyConf['mutator'], 2);
+                if (is_array($mutator) && count($mutator) > 0) {
+                    $mutator = array_map(function (string $s) use ($property): string {
+                        return str_replace('%property%', $property, $s);
+                    }, $propertyConf['mutator']);
 
-                        if (2 === count($splits)) {
-                            $propertyConf['mutator'] = $splits;
+                    if (count($mutator) >= 2) {
+                        $check = $mutator;
+
+                        if ('$this' === $mutator[0]) {
+                            $check[0] = $curClassName;
+                            $mutator[0] = null;
                         }
+
+                        // Check if instance or class method exists in current class.
+                        //
+                        // It doesn't check if it's actually callable in object context, thus it may generate
+                        // exceptions later when actually beeing invoked.
+                        if (!method_exists($check[0], $check[1])) {
+                            throw InvalidArgumentException::dueInvalidMutatorCallback(
+                                $curClassName,
+                                $property,
+                                $check
+                            );
+                        }
+                    } else {
+                        if (!is_callable($mutator[0])) {
+                            throw InvalidArgumentException::dueInvalidMutatorCallback(
+                                $curClassName,
+                                $property,
+                                $mutator
+                            );
+                        }
+
+                        $mutator = $mutator[0];
                     }
+                } else {
+                    $mutator = null;
                 }
+
+                $propertyConf['mutator'] = $mutator;
 
                 self::$propertiesConf[$curClassName]['byCase'][$property] = $propertyConf;
                 self::$propertiesConf[$curClassName]['byLCase'][$lcaseProperty] = $property;
@@ -239,13 +266,19 @@ final class Configuration
 
     private static function createGetImplementation(string $curClassName): Closure
     {
-        return (function (object $object, string $property, ?array $propertyConf): mixed {
+        return (function (object $object, string $property, ?array $propertyConf) use ($curClassName): mixed {
             if (!isset($propertyConf)) {
-                throw InvalidArgumentException::dueTriedToGetUnknownProperty($property);
+                throw InvalidArgumentException::dueTriedToGetUnknownProperty(
+                    $curClassName,
+                    $property
+                );
             }
 
             if (!$propertyConf['get']) {
-                throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty($property);
+                throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(
+                    $curClassName,
+                    $property
+                );
             }
 
             if (isset($propertyConf['existingMethods']['get'])) {
@@ -266,11 +299,17 @@ final class Configuration
             ?array $propertyConf
         ) use ($curClassName): object {
             if (!$propertyConf) {
-                throw InvalidArgumentException::dueTriedToSetUnknownProperty($property);
+                throw InvalidArgumentException::dueTriedToSetUnknownProperty(
+                    $curClassName,
+                    $property
+                );
             }
 
             if (!$propertyConf['set']) {
-                throw InvalidArgumentException::dueTriedToSetMisconfiguredProperty($property);
+                throw InvalidArgumentException::dueTriedToSetMisconfiguredProperty(
+                    $curClassName,
+                    $property
+                );
             }
 
             if (isset($propertyConf['existingMethods'][$accessorMethod])) {
@@ -283,8 +322,9 @@ final class Configuration
                 }
             } else {
                 $mutator = $propertyConf['mutator'];
+
                 if (null !== $mutator) {
-                    if (null === $mutator[0]) {
+                    if (is_array($mutator) && null === $mutator[0]) {
                         $mutator[0] = $object;
                     }
 
@@ -300,17 +340,26 @@ final class Configuration
 
     private static function createUnsetImplementation(string $curClassName): Closure
     {
-        return (function (object $object, string $property, ?array $propertyConf): object {
+        return (function (object $object, string $property, ?array $propertyConf) use ($curClassName): object {
             if (!$propertyConf) {
-                throw InvalidArgumentException::dueTriedToUnsetUnknownProperty($property);
+                throw InvalidArgumentException::dueTriedToUnsetUnknownProperty(
+                    $curClassName,
+                    $property
+                );
             }
 
             if (!$propertyConf['unset']) {
-                throw InvalidArgumentException::dueTriedToUnsetMisconfiguredProperty($property);
+                throw InvalidArgumentException::dueTriedToUnsetMisconfiguredProperty(
+                    $curClassName,
+                    $property
+                );
             }
 
             if ($propertyConf['immutable']) {
-                throw InvalidArgumentException::dueImmutablePropertyCantBeUnset($property);
+                throw InvalidArgumentException::dueImmutablePropertyCantBeUnset(
+                    $curClassName,
+                    $property
+                );
             }
 
             if (isset($propertyConf['existingMethods']['unset'])) {
@@ -325,13 +374,19 @@ final class Configuration
 
     private static function createIssetImplementation(string $curClassName): Closure
     {
-        return (function (object $object, string $property, ?array $propertyConf): bool {
+        return (function (object $object, string $property, ?array $propertyConf) use ($curClassName): bool {
             if (!isset($propertyConf)) {
-                throw InvalidArgumentException::dueTriedToGetUnknownProperty($property);
+                throw InvalidArgumentException::dueTriedToGetUnknownProperty(
+                    $curClassName,
+                    $property
+                );
             }
 
             if (!$propertyConf['get']) {
-                throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty($property);
+                throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(
+                    $curClassName,
+                    $property
+                );
             }
 
             if (isset($propertyConf['existingMethods']['isset'])) {
