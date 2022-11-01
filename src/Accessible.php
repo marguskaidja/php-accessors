@@ -20,7 +20,7 @@ trait Accessible
 {
     /**
      * @param  string  $method
-     * @param  array   $args
+     * @param  mixed[] $args
      *
      * @return mixed
      * @throws ReflectionException

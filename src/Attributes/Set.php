@@ -17,8 +17,13 @@ use Attribute;
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
 class Set extends Base
 {
+    /** @var null|string[] */
     protected ?array $mutator;
 
+    /**
+     * @param  bool|null            $enabled
+     * @param  string|string[]|null $mutator
+     */
     public function __construct(?bool $enabled = true, string|array $mutator = null)
     {
         parent::__construct($enabled);
@@ -36,9 +41,13 @@ class Set extends Base
             $mutator = array_values($mutator);
         }
 
+        /** @var string[] $mutator */
         $this->mutator = $mutator;
     }
 
+    /**
+     * @return string[]|null
+     */
     public function mutator(): array|null
     {
         return $this->mutator;

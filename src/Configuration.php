@@ -26,6 +26,7 @@ use ReflectionException;
 
 final class Configuration
 {
+    /** @var array<string, mixed> */
     private static array $propertiesConf = [];
 
     /**
@@ -33,9 +34,9 @@ final class Configuration
      *
      * Configuration is cached so later requests for same class are returned instantly.
      *
-     * @param  string  $curClassName
+     * @param  class-string  $curClassName
      *
-     * @return array
+     * @return mixed[]
      * @throws ReflectionException
      */
     public static function load(string $curClassName): array
@@ -62,7 +63,9 @@ final class Configuration
                 foreach ($reflection->getAttributes() as $reflectionAttribute) {
                     switch ($reflectionAttribute->getName()) {
                         case Get::class:
-                            $enabled = $reflectionAttribute->newInstance()->enabled();
+                            /** @var Get $inst */
+                            $inst = $reflectionAttribute->newInstance();
+                            $enabled = $inst->enabled();
                             if (null !== $enabled) {
                                 $conf['get'] = [
                                     'isset' => true,
@@ -71,6 +74,7 @@ final class Configuration
                             }
                             break;
                         case Set::class:
+                            /** @var Set $inst */
                             $inst = $reflectionAttribute->newInstance();
                             $enabled = $inst->enabled();
                             if (null !== $enabled) {
@@ -88,7 +92,9 @@ final class Configuration
                             }
                             break;
                         case Delete::class:
-                            $enabled = $reflectionAttribute->newInstance()->enabled();
+                            /** @var Delete $inst */
+                            $inst = $reflectionAttribute->newInstance();
+                            $enabled = $inst->enabled();
                             if (null !== $enabled) {
                                 $conf['unset'] = [
                                     'isset' => true,
@@ -127,7 +133,8 @@ final class Configuration
             };
 
             if (!isset(self::$propertiesConf[$curClassName]['attributes'])) {
-                $classNames = array_reverse(array_merge([$curClassName], class_parents($curClassName)));
+                /** @var class-string[] $classNames */
+                $classNames = array_reverse(array_merge([$curClassName], (array)class_parents($curClassName)));
                 $mergedClassAttr = null;
 
                 foreach ($classNames as $className) {

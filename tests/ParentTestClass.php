@@ -17,6 +17,12 @@ use margusk\Accessors\Attributes\Get;
 use margusk\Accessors\Attributes\Set;
 use margusk\Accessors\Accessible;
 
+/**
+ * @property string $parentProperty
+ *
+ * @method string   getParentProperty()
+ * @method self     setParentProperty(string $value)
+ */
 #[Get, Set, Delete]
 class ParentTestClass
 {
@@ -24,12 +30,12 @@ class ParentTestClass
 
     protected string $parentProperty;
 
-    public static function staticMutateP1($value): string
+    public static function staticMutateP1(string $value): string
     {
         return htmlspecialchars($value);
     }
 
-    public function nonStaticMutate($value): string
+    public function nonStaticMutate(string $value): string
     {
         return htmlspecialchars($value);
     }

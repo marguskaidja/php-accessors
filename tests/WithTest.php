@@ -19,42 +19,38 @@ use margusk\Accessors\Accessible;
 
 class WithTest extends TestCase
 {
-    public function test_set_method_must_fail()
+    public function test_set_method_must_fail(): void
     {
-        $obj = new #[Set,Immutable] class('value') {
+        $obj = new #[Set,Immutable] class {
             use Accessible;
 
-            public function __construct(
-                protected string $p1
-            ) {
-            }
+            protected string $p1;
         };
 
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/is available only for mutable properties/');
 
-        $obj->setP1('value');
+        /** @phpstan-ignore-next-line */
+        $obj->setP1('this must fail');
     }
 
-    public function test_direct_assignment_must_fail()
+    public function test_direct_assignment_must_fail(): void
     {
         /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
-        $obj = new #[Set,Immutable] class('old value') {
+        $obj = new #[Set,Immutable] class {
             use Accessible;
 
-            public function __construct(
-                protected string $p1
-            ) {
-            }
+            protected string $p1;
         };
 
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/can\'t be set using assignment operator/');
 
-        $obj->p1 = 'new value';
+        /** @phpstan-ignore-next-line */
+        $obj->p1 = 'this must fail';
     }
 
-    public function test_original_object_must_not_be_modified()
+    public function test_original_object_must_not_be_modified(): void
     {
         $oldValue = 'old value';
         $obj = new #[Set,Immutable] class($oldValue) {
@@ -71,12 +67,13 @@ class WithTest extends TestCase
             }
         };
 
+        /** @phpstan-ignore-next-line */
         $obj->withP1('new value');
 
         $this->assertEquals($oldValue, $obj->getP1Value());
     }
 
-    public function test_cloned_object_must_be_returned_with_modified_value()
+    public function test_cloned_object_must_be_returned_with_modified_value(): void
     {
         $oldValue = 'old value';
 
@@ -101,6 +98,8 @@ class WithTest extends TestCase
         };
 
         $newValue = 'new value';
+
+        /** @phpstan-ignore-next-line */
         $obj2 = $obj1->withP1($newValue);
 
         $this->assertEquals($oldValue, $obj1->getP1Value());
@@ -108,7 +107,7 @@ class WithTest extends TestCase
         $this->assertNotObjectEquals($obj1, $obj2);
     }
 
-    public function test_updating_multiple_values_should_work()
+    public function test_updating_multiple_values_should_work(): void
     {
         $obj1 = new #[Set,Immutable] class {
             use Accessible;
@@ -124,7 +123,7 @@ class WithTest extends TestCase
                 return  $this === $other;
             }
 
-            public function getPropertyValue(string $propertyName)
+            public function getPropertyValue(string $propertyName): string
             {
                 return $this->{$propertyName};
             }
@@ -134,6 +133,7 @@ class WithTest extends TestCase
             'value0', 'value1', 'value2', 'value3'
         ];
 
+        /** @phpstan-ignore-next-line */
         $obj2 = $obj1->with([
             'p0' => $values[0],
             'p1' => $values[1],
@@ -149,7 +149,7 @@ class WithTest extends TestCase
         $this->assertNotObjectEquals($obj1, $obj2);
     }
 
-    public function test_honour_existing_wither_method()
+    public function test_honour_existing_wither_method(): void
     {
         $obj = new #[Set,Immutable] class {
             const EXPECTED_VALUE = 'existing method called';
@@ -158,7 +158,7 @@ class WithTest extends TestCase
 
             protected string $p1;
 
-            public function withP1($value): static
+            public function withP1(string $value): static
             {
                 $obj = clone $this;
                 $obj->p1 = self::EXPECTED_VALUE;
@@ -171,6 +171,7 @@ class WithTest extends TestCase
             }
         };
 
+        /** @phpstan-ignore-next-line */
         $cloned = $obj->with(['p1' => 'this value must not be assigned']);
 
         $this->assertEquals($cloned::EXPECTED_VALUE, $cloned->getP1value());
