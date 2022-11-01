@@ -15,7 +15,6 @@ namespace margusk\Accessors\Tests;
 use margusk\Accessors\Attributes\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
 use margusk\Accessors\Accessible;
-use TypeError;
 
 class SetTest extends TestCase
 {
