@@ -19,7 +19,7 @@ use TypeError;
 
 class SetTest extends TestCase
 {
-    public function test_set_should_update_value_with_property_attribute()
+    public function test_set_should_update_value_with_property_attribute(): void
     {
         $obj = new class {
             use Accessible;
@@ -34,23 +34,35 @@ class SetTest extends TestCase
         };
 
         $value = 'this is updated value';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1 = $value;
+
         $this->assertEquals($value, $obj->getP1Value());
 
         $value = 'this is updated value2';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1($value);
+
         $this->assertEquals($value, $obj->getP1Value());
 
         $value = 'this is updated value3';
+
+        /** @phpstan-ignore-next-line */
         $obj->setP1($value);
+
         $this->assertEquals($value, $obj->getP1Value());
 
         $value = 'this is updated value4';
+
+        /** @phpstan-ignore-next-line */
         $obj->set(['p1' => $value]);
+
         $this->assertEquals($value, $obj->getP1Value());
     }
 
-    public function test_set_should_update_value_with_class_attribute()
+    public function test_set_should_update_value_with_class_attribute(): void
     {
         $obj = new #[Set] class {
             use Accessible;
@@ -64,23 +76,35 @@ class SetTest extends TestCase
         };
 
         $value = 'this is updated value';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1 = $value;
+
         $this->assertEquals($value, $obj->getP1Value());
 
         $value = 'this is updated value2';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1($value);
+
         $this->assertEquals($value, $obj->getP1Value());
 
         $value = 'this is updated value3';
+
+        /** @phpstan-ignore-next-line */
         $obj->setP1($value);
+
         $this->assertEquals($value, $obj->getP1Value());
 
         $value = 'this is updated value4';
+
+        /** @phpstan-ignore-next-line */
         $obj->set(['p1' => $value]);
+
         $this->assertEquals($value, $obj->getP1Value());
     }
 
-    public function test_set_should_update_value_with_property_attribute_override()
+    public function test_set_should_update_value_with_property_attribute_override(): void
     {
         $obj = new #[Set(false)] class {
             use Accessible;
@@ -95,23 +119,35 @@ class SetTest extends TestCase
         };
 
         $value = 'this is updated value';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1 = $value;
+
         $this->assertEquals($value, $obj->getP1Value());
 
         $value = 'this is updated value2';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1($value);
+
         $this->assertEquals($value, $obj->getP1Value());
 
         $value = 'this is updated value3';
+
+        /** @phpstan-ignore-next-line */
         $obj->setP1($value);
+
         $this->assertEquals($value, $obj->getP1Value());
 
         $value = 'this is updated value4';
+
+        /** @phpstan-ignore-next-line */
         $obj->set(['p1' => $value]);
+
         $this->assertEquals($value, $obj->getP1Value());
     }
 
-    public function test_set_should_update_multiple_values()
+    public function test_set_should_update_multiple_values(): void
     {
         $obj = new #[Set] class {
             use Accessible;
@@ -121,7 +157,7 @@ class SetTest extends TestCase
             protected string $p2 = 'empty';
             protected string $p3 = 'empty';
 
-            public function getPropertyValue(string $propertyName)
+            public function getPropertyValue(string $propertyName): string
             {
                 return $this->{$propertyName};
             }
@@ -131,6 +167,7 @@ class SetTest extends TestCase
             'value0', 'value1', 'value2', 'value3'
         ];
 
+        /** @phpstan-ignore-next-line */
         $obj->set([
             'p0' => $values[0],
             'p1' => $values[1],
@@ -143,7 +180,7 @@ class SetTest extends TestCase
         }
     }
 
-    public function test_mutator_function_must_be_called_in_setter()
+    public function test_mutator_function_must_be_called_in_setter(): void
     {
         $obj = new #[Set(true, "htmlspecialchars")] class {
             use Accessible;
@@ -157,11 +194,14 @@ class SetTest extends TestCase
         };
 
         $value = '<b>GetSet</b>';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1 = $value;
+
         $this->assertEquals(htmlspecialchars($value), $obj->getP1Value());
     }
 
-    public function test_class_mutator_method_with_property_substition_must_be_called()
+    public function test_class_mutator_method_with_property_substition_must_be_called(): void
     {
         $obj = new #[Set(true, [ParentTestClass::class, "staticMutate%property%"])] class {
             use Accessible;
@@ -175,18 +215,21 @@ class SetTest extends TestCase
         };
 
         $value = '<b>GetSet</b>';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1 = $value;
+
         $this->assertEquals(ParentTestClass::staticMutateP1($value), $obj->getP1Value());
     }
 
-    public function test_object_mutator_method_with_propertyname_substitution_must_be_called()
+    public function test_object_mutator_method_with_propertyname_substitution_must_be_called(): void
     {
         $obj = new #[Set(true, '$this->mutate%property%')] class {
             use Accessible;
 
             protected string $p1;
 
-            public function mutateP1($value): string
+            public function mutateP1(string $value): string
             {
                 return htmlspecialchars($value);
             }
@@ -198,11 +241,14 @@ class SetTest extends TestCase
         };
 
         $value = '<b>GetSet</b>';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1 = $value;
+
         $this->assertEquals($obj->mutateP1($value), $obj->getP1Value());
     }
 
-    public function test_disable_mutator_with_property_attribute_override()
+    public function test_disable_mutator_with_property_attribute_override(): void
     {
         $obj = new #[Set(true, "htmlspecialchars")] class {
             use Accessible;
@@ -217,11 +263,14 @@ class SetTest extends TestCase
         };
 
         $value = '<b>GetSet</b>';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1 = $value;
+
         $this->assertEquals($value, $obj->getP1Value());
     }
 
-    public function test_set_should_fail_with_protected_value()
+    public function test_set_should_fail_with_protected_value(): void
     {
         /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set(true)] class {
@@ -236,10 +285,11 @@ class SetTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to set misconfigured property|');
 
+        /** @phpstan-ignore-next-line */
         $obj->p2 = 'this must fail';
     }
 
-    public function test_set_should_fail_with_unknown_property_through_direct_assignment()
+    public function test_set_should_fail_with_unknown_property_through_direct_assignment(): void
     {
         /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set] class {
@@ -251,10 +301,11 @@ class SetTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to set unknown property|');
 
+        /** @phpstan-ignore-next-line */
         $obj->p2 = 'new value';
     }
 
-    public function test_set_should_fail_with_unknown_property_using_method_call()
+    public function test_set_should_fail_with_unknown_property_using_method_call(): void
     {
         $obj = new #[Set] class {
             use Accessible;
@@ -265,10 +316,11 @@ class SetTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to set unknown property|');
 
+        /** @phpstan-ignore-next-line */
         $obj->setP2('new value');
     }
 
-    public function test_set_should_fail_with_unknown_property_using_method_call_with_multiple_properties()
+    public function test_set_should_fail_with_unknown_property_using_method_call_with_multiple_properties(): void
     {
         $obj = new #[Set] class {
             use Accessible;
@@ -282,6 +334,7 @@ class SetTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to set unknown property|');
 
+        /** @phpstan-ignore-next-line */
         $obj->set([
             'p1' => 'new value',
             'p2' => 'new value',
@@ -290,7 +343,7 @@ class SetTest extends TestCase
         ]);
     }
 
-    public function test_attributes_must_be_inherited_from_parent_class()
+    public function test_attributes_must_be_inherited_from_parent_class(): void
     {
         $obj = new class extends ParentTestClass {
             protected string $p1;
@@ -302,18 +355,21 @@ class SetTest extends TestCase
         };
 
         $value = 'this is protected value';
+
+        /** @phpstan-ignore-next-line */
         $obj->p1 = $value;
+
         $this->assertEquals($value, $obj->getP1Value());
     }
 
-    public function test_honour_existing_setter_method()
+    public function test_honour_existing_setter_method(): void
     {
         $obj = new #[Set] class {
             use Accessible;
 
             protected string $p1;
 
-            public function setP1($value): void
+            public function setP1(string $value): void
             {
                 $this->p1 = 'mutated value';
             }
@@ -324,6 +380,7 @@ class SetTest extends TestCase
             }
         };
 
+        /** @phpstan-ignore-next-line */
         $obj->p1 = 'updated value';
 
         $this->assertEquals('mutated value', $obj->getP1value());

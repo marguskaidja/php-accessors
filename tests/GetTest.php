@@ -18,7 +18,7 @@ use margusk\Accessors\Accessible;
 
 class GetTest extends TestCase
 {
-    public function test_get_should_return_correct_value_with_property_attribute()
+    public function test_get_should_return_correct_value_with_property_attribute(): void
     {
         $obj = new class {
             use Accessible;
@@ -27,13 +27,30 @@ class GetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->assertEquals('this is protected value', $obj->p1);
-        $this->assertEquals('this is protected value', $obj->p1());
-        $this->assertEquals('this is protected value', $obj->getP1());
-        $this->assertEquals('this is protected value', $obj->get('p1'));
+
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->p1
+        );
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->p1()
+        );
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->getP1()
+        );
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->get('p1')
+        );
     }
 
-    public function test_get_should_return_correct_value_with_class_attribute()
+    public function test_get_should_return_correct_value_with_class_attribute(): void
     {
         $obj = new #[Get] class {
             use Accessible;
@@ -41,13 +58,29 @@ class GetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->assertEquals('this is protected value', $obj->p1);
-        $this->assertEquals('this is protected value', $obj->p1());
-        $this->assertEquals('this is protected value', $obj->getP1());
-        $this->assertEquals('this is protected value', $obj->get('p1'));
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->p1
+        );
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->p1()
+        );
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->getP1()
+        );
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->get('p1')
+        );
     }
 
-    public function test_get_should_return_correct_value_with_property_attribute_override()
+    public function test_get_should_return_correct_value_with_property_attribute_override(): void
     {
         $obj = new #[Get(false)] class {
             use Accessible;
@@ -56,13 +89,29 @@ class GetTest extends TestCase
             protected string $p1 = 'this is protected value';
         };
 
-        $this->assertEquals('this is protected value', $obj->p1);
-        $this->assertEquals('this is protected value', $obj->p1());
-        $this->assertEquals('this is protected value', $obj->getP1());
-        $this->assertEquals('this is protected value', $obj->get('p1'));
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->p1
+        );
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->p1()
+        );
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->getP1()
+        );
+        $this->assertEquals(
+            'this is protected value',
+            /** @phpstan-ignore-next-line */
+            $obj->get('p1')
+        );
     }
 
-    public function test_get_should_fail_with_protected_property()
+    public function test_get_should_fail_with_protected_property(): void
     {
         $obj = new #[Get(true)] class {
             use Accessible;
@@ -76,10 +125,11 @@ class GetTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to get misconfigured property|');
 
+        /** @phpstan-ignore-next-line */
         $obj->getP2();
     }
 
-    public function test_get_should_fail_with_unknown_property_using_direct_access()
+    public function test_get_should_fail_with_unknown_property_using_direct_access(): void
     {
         $obj = new #[Get] class {
             use Accessible;
@@ -90,11 +140,14 @@ class GetTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to get unknown property|');
 
-        /** @noinspection PhpExpressionResultUnusedInspection */
+        /**
+         * @noinspection PhpExpressionResultUnusedInspection
+         * @phpstan-ignore-next-line
+         */
         $obj->p2;
     }
 
-    public function test_get_should_fail_with_unknown_property_using_method_call()
+    public function test_get_should_fail_with_unknown_property_using_method_call(): void
     {
         $obj = new #[Get] class {
             use Accessible;
@@ -105,10 +158,11 @@ class GetTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to get unknown property|');
 
+        /** @phpstan-ignore-next-line */
         $obj->getP2();
     }
 
-    public function test_isset_should_return_false_for_uninitialized_property()
+    public function test_isset_should_return_false_for_uninitialized_property(): void
     {
         $obj = new #[Get] class {
             use Accessible;
@@ -117,10 +171,14 @@ class GetTest extends TestCase
         };
 
         $this->assertEquals(false, isset($obj->p1));
-        $this->assertEquals(false, $obj->issetP1());
+        $this->assertEquals(
+            false,
+            /** @phpstan-ignore-next-line */
+            $obj->issetP1()
+        );
     }
 
-    public function test_isset_should_return_true_for_initialized_property()
+    public function test_isset_should_return_true_for_initialized_property(): void
     {
         $obj = new #[Get] class {
             use Accessible;
@@ -129,22 +187,38 @@ class GetTest extends TestCase
         };
 
         $this->assertEquals(true, isset($obj->p1));
-        $this->assertEquals(true, $obj->issetP1());
+        $this->assertEquals(
+            true,
+            /** @phpstan-ignore-next-line */
+            $obj->issetP1()
+        );
     }
 
-    public function test_attributes_must_be_inherited_from_parent_class()
+    public function test_attributes_must_be_inherited_from_parent_class(): void
     {
         $obj = new class extends ParentTestClass {
             protected string $p1 = 'this is protected value';
         };
 
         $value = 'this is protected value';
-        $this->assertEquals($value, $obj->p1);
-        $this->assertEquals($value, $obj->getP1());
-        $this->assertEquals($value, $obj->p1());
+        $this->assertEquals(
+            $value,
+            /** @phpstan-ignore-next-line */
+            $obj->p1
+        );
+        $this->assertEquals(
+            $value,
+            /** @phpstan-ignore-next-line */
+            $obj->getP1()
+        );
+        $this->assertEquals(
+            $value,
+            /** @phpstan-ignore-next-line */
+            $obj->p1()
+        );
     }
 
-    public function test_honour_existing_getter_method()
+    public function test_honour_existing_getter_method(): void
     {
         $obj = new #[Get] class {
             use Accessible;
@@ -157,10 +231,14 @@ class GetTest extends TestCase
             }
         };
 
-        $this->assertEquals('value from getter', $obj->p1);
+        $this->assertEquals(
+            'value from getter',
+            /** @phpstan-ignore-next-line */
+            $obj->p1
+        );
     }
 
-    public function test_honour_existing_isset_method()
+    public function test_honour_existing_isset_method(): void
     {
         $obj = new #[Get] class {
             use Accessible;

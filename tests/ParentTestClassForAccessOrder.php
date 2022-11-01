@@ -16,6 +16,12 @@ use margusk\Accessors\Attributes\Get;
 use margusk\Accessors\Attributes\Set;
 use margusk\Accessors\Accessible;
 
+/**
+ * @property string $parentProperty
+ *
+ * @method string   getParentProperty()
+ * @method self     setParentProperty(string $value)
+ */
 #[Get, Set]
 class ParentTestClassForAccessOrder
 {

@@ -18,7 +18,7 @@ use margusk\Accessors\Accessible;
 
 class CombinedTest extends TestCase
 {
-    public function test_direct_access_with_case_sensitivity_and_no_match_must_fail()
+    public function test_direct_access_with_case_sensitivity_and_no_match_must_fail(): void
     {
         $obj = new #[Get] class {
             use Accessible;
@@ -29,11 +29,14 @@ class CombinedTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/tried to get unknown property/');
 
-        /** @noinspection PhpExpressionResultUnusedInspection */
+        /**
+         * @noinspection PhpExpressionResultUnusedInspection
+         * @phpstan-ignore-next-line
+         */
         $obj->propertY;
     }
 
-    public function test_flexible_method_call_access_with_case_sensitivity_and_no_match_must_fail()
+    public function test_flexible_method_call_access_with_case_sensitivity_and_no_match_must_fail(): void
     {
         $obj = new #[Get] class {
             use Accessible;
@@ -44,10 +47,11 @@ class CombinedTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/tried to get unknown property/');
 
+        /** @phpstan-ignore-next-line */
         $obj->get('PROPerty');
     }
 
-    public function test_property_name_is_case_insensitive_when_accessing_in_method_syntax()
+    public function test_property_name_is_case_insensitive_when_accessing_in_method_syntax(): void
     {
         $obj = new #[Get, Set] class {
             use Accessible;
@@ -55,14 +59,23 @@ class CombinedTest extends TestCase
             protected string $PropertY = 'some value';
         };
 
-        $this->assertEquals('some value', $obj->propertY());
+        $this->assertEquals(
+            'some value',
+            /** @phpstan-ignore-next-line */
+            $obj->propertY()
+        );
 
+        /** @phpstan-ignore-next-line */
         $obj->setPROPERTY('new value');
 
-        $this->assertEquals('new value', $obj->getpRoPertY());
+        $this->assertEquals(
+            'new value',
+            /** @phpstan-ignore-next-line */
+            $obj->getpRoPertY()
+        );
     }
 
-    public function test_property_name_is_case_insensitive_when_accessing_in_direct_syntax()
+    public function test_property_name_is_case_insensitive_when_accessing_in_direct_syntax(): void
     {
         $obj = new #[Get, Set, CI] class {
             use Accessible;
@@ -71,12 +84,18 @@ class CombinedTest extends TestCase
         };
 
         $value = 'some value';
+
+        /** @phpstan-ignore-next-line */
         $obj->proPerTy = $value;
 
-        $this->assertEquals($value, $obj->prOperTy);
+        $this->assertEquals(
+            $value,
+            /** @phpstan-ignore-next-line */
+            $obj->prOperTy
+        );
     }
 
-    public function test_parent_class_is_parsed_correctly_later_when_child_is_accessed_first()
+    public function test_parent_class_is_parsed_correctly_later_when_child_is_accessed_first(): void
     {
         $child = new #[Get, Set, CI] class extends ParentTestClassForAccessOrder {
             use Accessible;
@@ -94,7 +113,7 @@ class CombinedTest extends TestCase
         $this->assertEquals($parentPropertyValue, $parent->parentProperty);
     }
 
-    public function test_named_arguments_to_accessor_method_are_handled()
+    public function test_named_arguments_to_accessor_method_are_handled(): void
     {
         $obj = new #[Get,Set] class {
             use Accessible;
@@ -109,6 +128,7 @@ class CombinedTest extends TestCase
 
         $expectedValue = 'new value';
 
+        /** @phpstan-ignore-next-line */
         $obj->set(a: ['a' => $expectedValue]);
 
         $this->assertEquals(
