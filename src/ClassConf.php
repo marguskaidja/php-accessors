@@ -128,7 +128,7 @@ final class ClassConf
         } else {
             $caseInsensitive = self::$attributes[$this->name]
                 ->get(ICase::class)
-                ->enabled();
+                ?->enabled();
         }
 
         if ($caseInsensitive) {

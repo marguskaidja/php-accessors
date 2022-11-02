@@ -261,11 +261,11 @@ Notes:
 
 ### Mutator
 
-Sometimes it's handy to proxy the setter value through some intermediate method before assigning to property. This method is called _mutator_ and can be specified as second parameter for the `#[Set]` attribute:
+Sometimes it's handy to proxy the setter value through some intermediate method before assigning to property. This method is called _mutator_ and can be specified using `#[Mutator]` attribute:
 
 ```php
 use margusk\Accessors\Attr\{
-    Get, Set
+    Get, Set, Mutator
 };
 use margusk\Accessors\Accessible;
 
@@ -274,7 +274,7 @@ class A
 {
     use Accessible;
 
-    #[Set(true, "htmlspecialchars")]
+    #[Set,Mutator("htmlspecialchars")]
     protected string $prop1;
 
     protected string $prop2;
@@ -288,9 +288,9 @@ It can validate and/or tweak the value before beeing assigned to property.
 _Mutator_ parameter must be string or array representing a PHP callable. Following callable syntaxes are supported:
 1. `<function>` 
 1. `<class>::<method>` 
-1. `$this-><method>` (`$this` is replaced in runtime with the object instance in which context the accessor is currently executing)
+1. `$this-><method>` (`$this` is replaced during runtime with the object instance where the accessor belongs)
 
-It can contain a special variable named `%property%` which is replaced during parsing phase with the property name it applies. This is useful only when specifying mutator globally in class attribute.
+It may contain special variable named `%property%` which is replaced with the property name it applies. This is useful only when specifying mutator globally in class attribute.
 
 Specified callable must accept assignable value as first parameter and must return a value to be assigned to property.
 
@@ -487,17 +487,19 @@ class A
 ### Exposing properties
 
 1. Use `margusk\Accessors\Accessible` inside the class which properties you want to expose
-2. Add attribute `#[Get]`, `#[Set]` and/or `#[Delete]` before the declaration of the property you want to expose. Alternatively if you want to expose all class properties at once, add the attribute before class declaration:
-   * `margusk\Accessors\Attributes\Get(?bool $enabled = true)`: allow or disable to read and use `isset()` on the property.
-   * `margusk\Accessors\Attributes\Set(?bool $enabled = true, string $mutator = null)`: allow or disable to update the property. Second argument denotes optional _Mutator_ method through which the value is passed through before assigning to property.
-   * `margusk\Accessors\Attributes\Delete(?bool $enabled = true)`: allow or disable to `unset()` the property.
-3. Attribute `#[ICase]`:
+1. Add attribute `#[Get]`, `#[Set]` and/or `#[Delete]` before the declaration of the property you want to expose. Alternatively if you want to expose all class properties at once, add the attribute before class declaration:
+   * `margusk\Accessors\Attributes\Get(bool $enabled = true)`: allow or disable to read and use `isset()` on the property.
+   * `margusk\Accessors\Attributes\Set(bool $enabled = true)`: allow or disable to update the property. Second argument denotes optional _Mutator_ method through which the value is passed through before assigning to property.
+   * `margusk\Accessors\Attributes\Delete(bool $enabled = true)`: allow or disable to `unset()` the property.
+1. Attribute `#[Mutator]`:
+    * `margusk\Accessors\Attributes\Mutator(string|array|null $callback)`: the parameter works almost like `callable` but with a tweak in `string` type:
+       * if `string` type is used then it must contain regular function name or syntax `$this->someMutatorMethod` implies instance method.
+       * use `array` type for specifying static class method.
+       * and use `null` to discard any previously set mutator.
+1. Attribute `#[ICase]`:
    * `margusk\Accessors\Attributes\ICase()`: make accessing the property names case-insensitive. This can be added only to class declaration and can't be reverted later.
-4. Attribute `#[Immutable]`:
-   * `margusk\Accessors\Attributes\Immutable()`: turn on isImmutable flag for single property or whole class. Once the flag is added, it can't be reverted later. 
-
-Note:
-   * `null` value can be also used for `$enabled`, if you don't want to change the setting inherited from parent's declaration. This is currently useful only for `#[Set]` attribute where in class declaration there is default _mutator_ method defined and it needs to be changed by inherited class or property.
+1. Attribute `#[Immutable]`:
+   * `margusk\Accessors\Attributes\Immutable()`: turn on isImmutable flag for single property or whole class. Once the flag is added, it can't be reverted later.
 
 ### Properties can be accessed as following
 

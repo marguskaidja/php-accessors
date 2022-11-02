@@ -46,14 +46,14 @@ class PropertyConf
         $this->attr = (new Attributes($rfProperty))
             ->mergeParent($classAttr);
 
-        $this->isImmutable = $this->attr->get(Immutable::class)->enabled();
-        $this->isGettable = $this->attr->get(Get::class)->enabled();
-        $this->isSettable = $this->attr->get(Set::class)->enabled();
-        $this->isUnsettable = $this->attr->get(Delete::class)->enabled();
+        $this->isImmutable = ($this->attr->get(Immutable::class)?->enabled()) ?? false;
+        $this->isGettable = ($this->attr->get(Get::class)?->enabled()) ?? false;
+        $this->isSettable = ($this->attr->get(Set::class)?->enabled()) ?? false;
+        $this->isUnsettable = ($this->attr->get(Delete::class)?->enabled()) ?? false;
 
-        /** @var Mutator $mutator */
+        /** @var ?Mutator $mutator */
         $mutator = $this->attr->get(Mutator::class);
-        $mutatorCb = $mutator->mutator();
+        $mutatorCb = $mutator?->mutator();
 
         if (is_array($mutatorCb) && 2 === count($mutatorCb)) {
             $mutatorCb = array_map(function (?string $s): ?string {

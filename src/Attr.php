@@ -15,7 +15,7 @@ namespace margusk\Accessors;
 abstract class Attr
 {
     public function __construct(
-        private bool $enabled = true
+        protected bool $enabled = true
     ) {
     }
 

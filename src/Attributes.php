@@ -72,10 +72,14 @@ class Attributes
         return $new;
     }
 
-    public function get(string $name): Attr
+    public function get(string $name): ?Attr
     {
         if (!isset($this->attributes[$name])) {
             throw InvalidArgumentException::dueInvalidAttrRequested($name);
+        }
+
+        if (false === $this->attributeIsSet[$name]) {
+            return null;
         }
 
         return $this->attributes[$name];
@@ -94,8 +98,8 @@ class Attributes
                 Set::class          => new Set(false),
                 Delete::class       => new Delete(false),
                 Mutator::class      => new Mutator(null),
-                ICase::class        => new ICase(false),
-                Immutable::class    => new Immutable(false),
+                ICase::class        => new ICase(),
+                Immutable::class    => new Immutable(),
             ];
         }
 

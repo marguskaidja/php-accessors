@@ -18,4 +18,8 @@ use margusk\Accessors\Attr;
 #[Attribute(Attribute::TARGET_CLASS)]
 class ICase extends Attr
 {
+    public function __construct()
+    {
+        parent::__construct(true);
+    }
 }
