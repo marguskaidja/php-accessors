@@ -10,12 +10,17 @@
 
 declare(strict_types=1);
 
-namespace margusk\Accessors\Attributes;
+namespace margusk\Accessors;
 
-use Attribute;
-
-#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
-class Immutable extends Base
+abstract class Attr
 {
+    public function __construct(
+        private bool $enabled = true
+    ) {
+    }
 
+    public function enabled(): bool
+    {
+        return $this->enabled;
+    }
 }

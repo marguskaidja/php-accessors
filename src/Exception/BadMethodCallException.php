@@ -14,14 +14,14 @@ namespace margusk\Accessors\Exception;
 
 final class BadMethodCallException extends \BadMethodCallException
 {
-    public static function dueUnknownAccessorMethod(string $class, string $method): static
+    public static function dueUnknownAccessorMethod(string $class, string $method): self
     {
         return new self(
             sprintf('unknown accessor method %s::%s()', $class, $method)
         );
     }
 
-    public static function dueMutablePropertiesMustBeCalledUsingSet(string $class, string $propertyName): static
+    public static function dueMutablePropertiesMustBeCalledUsingSet(string $class, string $propertyName): self
     {
         return new self(
             sprintf(
@@ -32,7 +32,7 @@ final class BadMethodCallException extends \BadMethodCallException
         );
     }
 
-    public static function dueImmutablePropertiesMustBeCalledUsingWith(string $class, string $propertyName): static
+    public static function dueImmutablePropertiesMustBeCalledUsingWith(string $class, string $propertyName): self
     {
         return new self(
             sprintf(
@@ -43,7 +43,7 @@ final class BadMethodCallException extends \BadMethodCallException
         );
     }
 
-    public static function dueImmutablePropertiesCantBeSetUsingAssignmentOperator(string $class, string $propertyName): static
+    public static function dueImmutablePropertiesCantBeSetUsingAssignmentOperator(string $class, string $propertyName): self
     {
         return new self(
             sprintf(

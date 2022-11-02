@@ -12,7 +12,8 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
-use margusk\Accessors\Attributes\Set;
+use margusk\Accessors\Attr\Mutator;
+use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
 use margusk\Accessors\Accessible;
 
@@ -181,7 +182,7 @@ class SetTest extends TestCase
 
     public function test_mutator_function_must_be_called_in_setter(): void
     {
-        $obj = new #[Set(true, "htmlspecialchars")] class {
+        $obj = new #[Set,Mutator("htmlspecialchars")] class {
             use Accessible;
 
             protected string $p1;
@@ -202,7 +203,7 @@ class SetTest extends TestCase
 
     public function test_class_mutator_method_with_property_substition_must_be_called(): void
     {
-        $obj = new #[Set(true, [ParentTestClass::class, "staticMutate%property%"])] class {
+        $obj = new #[Set,Mutator([ParentTestClass::class, "staticMutate%property%"])] class {
             use Accessible;
 
             protected string $p1;
@@ -223,7 +224,7 @@ class SetTest extends TestCase
 
     public function test_object_mutator_method_with_propertyname_substitution_must_be_called(): void
     {
-        $obj = new #[Set(true, '$this->mutate%property%')] class {
+        $obj = new #[Set,Mutator('$this->mutate%property%')] class {
             use Accessible;
 
             protected string $p1;
@@ -249,10 +250,10 @@ class SetTest extends TestCase
 
     public function test_disable_mutator_with_property_attribute_override(): void
     {
-        $obj = new #[Set(true, "htmlspecialchars")] class {
+        $obj = new #[Set,Mutator("htmlspecialchars")] class {
             use Accessible;
 
-            #[Set(true, "")]
+            #[Mutator(null)]
             protected string $p1;
 
             public function getP1Value(): string
@@ -272,7 +273,7 @@ class SetTest extends TestCase
     public function test_set_should_fail_with_protected_value(): void
     {
         /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
-        $obj = new #[Set(true)] class {
+        $obj = new #[Set] class {
             use Accessible;
 
             protected string $p1;

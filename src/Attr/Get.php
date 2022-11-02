@@ -10,17 +10,12 @@
 
 declare(strict_types=1);
 
-namespace margusk\Accessors\Attributes;
+namespace margusk\Accessors\Attr;
 
-class Base
+use Attribute;
+use margusk\Accessors\Attr;
+
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
+class Get extends Attr
 {
-    public function __construct(
-        protected ?bool $enabled = true
-    ) {
-    }
-
-    public function enabled(): ?bool
-    {
-        return $this->enabled;
-    }
 }

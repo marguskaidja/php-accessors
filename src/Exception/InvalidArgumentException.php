@@ -12,8 +12,21 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Exception;
 
+use ReflectionClass;
+use ReflectionProperty;
+
 final class InvalidArgumentException extends \InvalidArgumentException
 {
+    public static function dueInvalidAttrRequested(string $name): self
+    {
+        return new self(
+            sprintf(
+                'invalid attribute %s requested',
+                $name
+            )
+        );
+    }
+
     /**
      * @param  string   $class
      * @param  string   $property
@@ -21,68 +34,118 @@ final class InvalidArgumentException extends \InvalidArgumentException
      *
      * @return static
      */
-    public static function dueInvalidMutatorCallback(string $class, string $property, array $callable): static
+    public static function dueInvalidMutatorCallback(string $class, string $property, string|array $callable): self
     {
         return new self(
             sprintf(
                 'mutator callback "%s" for property "%s::$%s" is not valid',
-                implode('::', $callable),
+                (is_array($callable) ? implode('::', $callable) : $callable),
                 $class,
                 $property
             )
         );
     }
 
-    public static function dueTriedToGetUnknownProperty(string $class, string $property): static
+    /**
+     * @param  ReflectionClass<object>|ReflectionProperty  $reflection
+     *
+     * @return static
+     */
+    public static function dueCaseInsensitivityCantBeSetToFalse(ReflectionClass|ReflectionProperty $reflection): self
+    {
+        if ($reflection instanceof ReflectionClass) {
+            /** @var ReflectionClass<object> $reflection */
+            $msg = sprintf(
+                'case sensitivity attribute can\'t be set to false for class %s',
+                $reflection->getName()
+            );
+        } else {
+            /** @var ReflectionProperty $reflection */
+            $msg = sprintf(
+                'case sensitivity attribute can\'t be set to false for property %s::$%s',
+                $reflection->class,
+                $reflection->getName()
+            );
+        }
+
+        return new self($msg);
+    }
+
+    /**
+     * @param  ReflectionClass<object>|ReflectionProperty  $reflection
+     *
+     * @return static
+     */
+    public static function dueImmutableCantBeSetToFalse(ReflectionClass|ReflectionProperty $reflection): self
+    {
+        if ($reflection instanceof ReflectionClass) {
+            /** @var ReflectionClass<object> $reflection */
+            $msg = sprintf(
+                'immutable attribute can\'t be set to false for class %s',
+                $reflection->getName()
+            );
+        } else {
+            /** @var ReflectionProperty $reflection */
+            $msg = sprintf(
+                'immutable attribute can\'t be set to false for property %s::$%s',
+                $reflection->class,
+                $reflection->getName()
+            );
+        }
+
+        return new self($msg);
+    }
+
+    public static function dueTriedToGetUnknownProperty(string $class, string $property): self
     {
         return new self(
             sprintf('tried to get unknown property "%s::$%s"', $class, $property)
         );
     }
 
-    public static function dueTriedToGetMisconfiguredProperty(string $class, string $property): static
+    public static function dueTriedToGetMisconfiguredProperty(string $class, string $property): self
     {
         return new self(
             sprintf('tried to get misconfigured property "%s::$%s" (missing #[Get] attribute?)', $class, $property)
         );
     }
 
-    public static function dueTriedToSetUnknownProperty(string $class, string $property): static
+    public static function dueTriedToSetUnknownProperty(string $class, string $property): self
     {
         return new self(
             sprintf('tried to set unknown property "%s::$%s"', $class, $property)
         );
     }
 
-    public static function dueTriedToSetMisconfiguredProperty(string $class, string $property): static
+    public static function dueTriedToSetMisconfiguredProperty(string $class, string $property): self
     {
         return new self(
             sprintf('tried to set misconfigured property "%s::$%s" (missing #[Set] attribute?)', $class, $property)
         );
     }
 
-    public static function dueTriedToUnsetUnknownProperty(string $class, string $property): static
+    public static function dueTriedToUnsetUnknownProperty(string $class, string $property): self
     {
         return new self(
             sprintf('tried to unset unknown property "%s::$%s"', $class, $property)
         );
     }
 
-    public static function dueTriedToUnsetMisconfiguredProperty(string $class, string $property): static
+    public static function dueTriedToUnsetMisconfiguredProperty(string $class, string $property): self
     {
         return new self(
             sprintf('tried to unset misconfigured property "%s::$%s" (missing #[Delete] attribute?)', $class, $property)
         );
     }
 
-    public static function dueImmutablePropertyCantBeUnset(string $class, string $property): static
+    public static function dueImmutablePropertyCantBeUnset(string $class, string $property): self
     {
         return new self(
             sprintf('immutable property "%s::$%s" can\'t be unset', $class, $property)
         );
     }
 
-    public static function dueMultiPropertyAccessorCanHaveExactlyOneArgument(string $class, string $method): static
+    public static function dueMultiPropertyAccessorCanHaveExactlyOneArgument(string $class, string $method): self
     {
         return new self(
             sprintf(
@@ -93,14 +156,14 @@ final class InvalidArgumentException extends \InvalidArgumentException
         );
     }
 
-    public static function dueMethodIsMissingPropertyNameArgument(string $class, string $method): static
+    public static function dueMethodIsMissingPropertyNameArgument(string $class, string $method): self
     {
         return new self(
             sprintf('missing argument #1 (property name) to method %s::%s()', $class, $method)
         );
     }
 
-    public static function duePropertyNameArgumentMustBeString(string $class, string $method, int $expectedArgIdx): static
+    public static function duePropertyNameArgumentMustBeString(string $class, string $method, int $expectedArgIdx): self
     {
         return new self(
             sprintf(
@@ -112,7 +175,19 @@ final class InvalidArgumentException extends \InvalidArgumentException
         );
     }
 
-    public static function dueMethodIsMissingPropertyValueArgument(string $class, string $method, int $expectedArgIdx): static
+    public static function dueMultiPropertyArrayContainsNonStringProperty(string $class, string $method, mixed $nonStringValue): self
+    {
+        return new self(
+            sprintf(
+                'property names in multi-property array be strings for method %s::%s() (%s encountered)',
+                $class,
+                $method,
+                gettype($nonStringValue)
+            )
+        );
+    }
+
+    public static function dueMethodIsMissingPropertyValueArgument(string $class, string $method, int $expectedArgIdx): self
     {
         return new self(
             sprintf(
@@ -124,7 +199,7 @@ final class InvalidArgumentException extends \InvalidArgumentException
         );
     }
 
-    public static function dueMethodHasMoreArgumentsThanExpected(string $class, string $method, int $expectedArgCount): static
+    public static function dueMethodHasMoreArgumentsThanExpected(string $class, string $method, int $expectedArgCount): self
     {
         return new self(
             sprintf(

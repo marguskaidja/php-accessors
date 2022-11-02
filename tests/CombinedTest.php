@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
-use margusk\Accessors\Attributes\{ICase as CI, Get, Set};
+use margusk\Accessors\Attr\{ICase as CI, Get, Set};
 use margusk\Accessors\Exception\InvalidArgumentException;
 use margusk\Accessors\Accessible;
 

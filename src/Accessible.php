@@ -27,7 +27,7 @@ trait Accessible
      */
     public function __call(string $method, array $args): mixed
     {
-        $classConf = Configuration::load(static::class);
+        $classConf = ClassConf::factory(static::class);
 
         $lcaseMethod = strtolower($method);
 
@@ -42,7 +42,7 @@ trait Accessible
         $nArgs = count($args);
         $propertyName = substr($method, strlen((string)$accessorMethod));
         $propertyValue = null;
-        $accessorProperties = [];
+        $propertiesList = [];
         $accessorMethodIsSetOrWith = in_array($accessorMethod, ['set', 'with']);
 
         // Check if the call is multi-property accessor, that is if first
@@ -59,11 +59,12 @@ trait Accessible
                 );
             }
 
-            $accessorProperties = array_shift($args);
+            /** @var mixed[] $propertiesList */
+            $propertiesList = array_shift($args);
 
             // Check if whole method name is property name like
             //  $obj->somePropertyName('somevalue')
-        } elseif (null === $accessorMethod && isset($classConf['byLCase'][strtolower($propertyName)])) {
+        } elseif (null === $accessorMethod && null !== $classConf->findPropertyConf($propertyName, true)) {
             // If there are zero arguments, then interpret the call as Getter
             // If there are arguments, then it's Setter
             if ($nArgs > 0) {
@@ -79,11 +80,11 @@ trait Accessible
             throw BadMethodCallException::dueUnknownAccessorMethod(static::class, $method);
         }
 
-        $getPropertyConfFunc = null;
+        $forcePropertyNameToCaseInsensitive = false;
 
         // If accessorProperties are not set at this point (thus not specified using array
         // as first parameter to set or with), then extract them as separate arguments to current method
-        if (0 === count($accessorProperties)) {
+        if (0 === count($propertiesList)) {
             if ('' === $propertyName) {
                 if (!count($args)) {
                     throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument(static::class, $method);
@@ -98,10 +99,12 @@ trait Accessible
                         count($args) + 1
                     );
                 }
+
+                /** @var string $propertyName */
             } else {
-                // If we arrive here, then property name was specified inside current method name and
+                // If we arrive here, then property name was specified partially or fully in method name and
                 // in this case we always interpret it as case-insensitive
-                $getPropertyConfFunc = $classConf['getPropertyConfICase'];
+                $forcePropertyNameToCaseInsensitive = true;
             }
 
             if ($accessorMethodIsSetOrWith) {
@@ -126,14 +129,10 @@ trait Accessible
             }
 
             if ($accessorMethodIsSetOrWith) {
-                $accessorProperties[$propertyName] = $propertyValue;
+                $propertiesList[$propertyName] = $propertyValue;
             } else {
-                $accessorProperties[] = $propertyName;
+                $propertiesList[] = $propertyName;
             }
-        }
-
-        if (null === $getPropertyConfFunc) {
-            $getPropertyConfFunc = $classConf['getPropertyConf'];
         }
 
         $result = $this;
@@ -144,10 +143,19 @@ trait Accessible
                 $result = clone $result;
             }
 
-            foreach ($accessorProperties as $propertyName => $propertyValue) {
-                $propertyName = (string)$propertyName;
-                $propertyConf = $getPropertyConfFunc($propertyName);
-                $immutable = $propertyConf['immutable'] ?? null;
+            $accessorImpl = $classConf->getSetter();
+
+            foreach ($propertiesList as $propertyName => $propertyValue) {
+                if (!is_string($propertyName)) {
+                    throw InvalidArgumentException::dueMultiPropertyArrayContainsNonStringProperty(
+                        static::class,
+                        $method,
+                        $propertyName
+                    );
+                }
+
+                $propertyConf = $classConf->findPropertyConf($propertyName, $forcePropertyNameToCaseInsensitive);
+                $immutable = ($propertyConf?->isImmutable()) ?? false;
 
                 // Check if mutable/immutable property was called using correct method:
                 //  - mutable properties must be accessed using "set"
@@ -168,13 +176,27 @@ trait Accessible
                     }
                 }
 
-                $result = $classConf['setImpl']($result, $accessorMethod, $propertyName, $propertyValue, $propertyConf);
+                $result = $accessorImpl($result, $accessorMethod, $propertyName, $propertyValue, $propertyConf);
             }
         } else {
-            foreach ($accessorProperties as $propertyName) {
-                $propertyName = (string)$propertyName;
-                $propertyConf = $getPropertyConfFunc($propertyName);
-                $result = $classConf[$accessorMethod.'Impl']($result, $propertyName, $propertyConf);
+            /** @var 'get'|'isset'|'unset' $accessorMethod */
+            $accessorImpl = match($accessorMethod) {
+                'get'   => $classConf->getGetter(),
+                'isset' => $classConf->getIsSetter(),
+                'unset' => $classConf->getUnSetter()
+            };
+
+            foreach ($propertiesList as $propertyName) {
+                if (!is_string($propertyName)) {
+                    throw InvalidArgumentException::dueMultiPropertyArrayContainsNonStringProperty(
+                        static::class,
+                        $method,
+                        $propertyName
+                    );
+                }
+
+                $propertyConf = $classConf->findPropertyConf($propertyName, $forcePropertyNameToCaseInsensitive);
+                $result = $accessorImpl($result, $propertyName, $propertyConf);
             }
         }
 
@@ -182,67 +204,67 @@ trait Accessible
     }
 
     /**
-     * @param  string  $property
+     * @param  string  $propertyName
      *
      * @return mixed
      * @throws ReflectionException
      */
-    public function __get(string $property): mixed
+    public function __get(string $propertyName): mixed
     {
-        $classConf = Configuration::load(static::class);
-        $propertyConf = $classConf['getPropertyConf']($property);
+        $classConf = ClassConf::factory(static::class);
+        $propertyConf = $classConf->findPropertyConf($propertyName);
 
-        return $classConf['getImpl']($this, $property, $propertyConf);
+        return ($classConf->getGetter())($this, $propertyName, $propertyConf);
     }
 
     /**
-     * @param  string  $property
-     * @param  mixed   $value
+     * @param  string  $propertyName
+     * @param  mixed   $propertyValue
      *
      * @return void
      * @throws ReflectionException
      */
-    public function __set(string $property, mixed $value): void
+    public function __set(string $propertyName, mixed $propertyValue): void
     {
-        $classConf = Configuration::load(static::class);
-        $propertyConf = $classConf['getPropertyConf']($property);
-        $immutable = $propertyConf['immutable'] ?? false;
+        $classConf = ClassConf::factory(static::class);
+        $propertyConf = $classConf->findPropertyConf($propertyName);
+        $immutable = $propertyConf?->isImmutable();
 
         if ($immutable) {
             throw BadMethodCallException::dueImmutablePropertiesCantBeSetUsingAssignmentOperator(
                 static::class,
-                $property
+                $propertyName
             );
         }
 
-        $classConf['setImpl']($this, 'set', $property, $value, $propertyConf);
+        ($classConf->getSetter())($this, 'set', $propertyName, $propertyValue, $propertyConf);
     }
 
     /**
-     * @param  string  $property
+     * @param  string  $propertyName
      *
      * @return bool
      * @throws ReflectionException
      */
-    public function __isset(string $property): bool
+    public function __isset(string $propertyName): bool
     {
-        $classConf = Configuration::load(static::class);
-        $propertyConf = $classConf['getPropertyConf']($property);
+        $classConf = ClassConf::factory(static::class);
+        $propertyConf = $classConf->findPropertyConf($propertyName);
 
-        return $classConf['issetImpl']($this, $property, $propertyConf);
+        return ($classConf->getIsSetter())($this, $propertyName, $propertyConf);
     }
 
     /**
-     * @param  string  $property
+     * @param  string  $propertyName
      *
      * @return void
      * @throws ReflectionException
      */
-    public function __unset(string $property): void
+    public function __unset(string $propertyName): void
     {
-        $classConf = Configuration::load(static::class);
-        $propertyConf = $classConf['getPropertyConf']($property);
+        $classConf = ClassConf::factory(static::class);
+        $propertyConf = $classConf->findPropertyConf($propertyName);
 
-        $classConf['unsetImpl']($this, $property, $propertyConf);
+        ($classConf->getUnSetter())($this, $propertyName, $propertyConf);
     }
 }

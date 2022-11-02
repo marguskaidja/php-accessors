@@ -10,12 +10,12 @@
 
 declare(strict_types=1);
 
-namespace margusk\Accessors\Attributes;
+namespace margusk\Accessors\Attr;
 
 use Attribute;
+use margusk\Accessors\Attr;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-class ICase extends Base
+class ICase extends Attr
 {
-
 }

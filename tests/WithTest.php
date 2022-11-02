@@ -12,8 +12,8 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
-use margusk\Accessors\Attributes\Set;
-use margusk\Accessors\Attributes\Immutable;
+use margusk\Accessors\Attr\Set;
+use margusk\Accessors\Attr\Immutable;
 use margusk\Accessors\Exception\BadMethodCallException;
 use margusk\Accessors\Accessible;
 

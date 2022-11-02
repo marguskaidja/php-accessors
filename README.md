@@ -70,7 +70,7 @@ This has boilerplate code just to make 3 properties readable. In case there are 
 By using `Accessible` trait this class can be rewritten:
 
 ```php
-use margusk\Accessors\Attributes\Get;
+use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Accessible;
 
 class A
@@ -94,8 +94,9 @@ echo $a->getProp3() . "\n";  // Outputs "value3"
 ```
 
 If you have lot's of properties to expose, then it's not reasonable to mark each one of them separately. Mark all properties at once in the class declaration:
+
 ```php
-use margusk\Accessors\Attributes\Get;
+use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Accessible;
 
 #[Get]
@@ -111,8 +112,9 @@ class A
 }
 ```
 Make all properties readable except `$prop2`:
+
 ```php
-use margusk\Accessors\Attributes\Get;
+use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Accessible;
 
 #[Get]
@@ -132,8 +134,9 @@ class A
 echo (new A())->getProp2();      
 ```
 What about writing to properties? Yes, just add `#[Set]` attribute:
+
 ```php
-use margusk\Accessors\Attributes\{
+use margusk\Accessors\Attr\{
     Get, Set
 };
 use margusk\Accessors\Accessible;
@@ -164,15 +167,16 @@ $a->setProp2("new value2");                     // Throws InvalidArgumentExcepti
 
 ### Immutable properties
 
-Objects which allow their contents to be changed are named as **mutable**. And in contrast the ones who don't are [**immutable**](https://en.wikipedia.org/wiki/Immutable_object).
+Objects which allow their contents to be changed are named as **mutable**. And in contrast the ones who don't are [**isImmutable**](https://en.wikipedia.org/wiki/Immutable_object).
 
 When talking about immutability, then it usually means combination of restricting the changes inside the original object, but allowing to make a copy of the object with desired changes.
 
 This way original object stays intact and cloned object with changes can be used for new operations. 
 
 Consider following situation:
+
 ```php
-use margusk\Accessors\Attributes\Get;
+use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Accessible;
 
 #[Get]
@@ -204,8 +208,9 @@ $b = new B($a->a, $a->b,  $a->c,  $a->d,  $a->e,  7);
 ```
 
 With `#[Immutable]` flag things can be written more simpler:
+
 ```php
-use margusk\Accessors\Attributes\{
+use margusk\Accessors\Attr\{
     Get, Set, Immutable
 };
 use margusk\Accessors\Accessible;
@@ -248,17 +253,18 @@ echo $b->f; // Outputs "7"
 
 Notes:
 * Immutability here is implemented _weakly_, not to be confused with [strong immutability](https://en.wikipedia.org/wiki/Immutable_object#Weak_vs_strong_immutability). For example:
-    * There's no rule how much of the object should be made immutable. It can be only one property or whole object (all properties) if wanted.  
+    * There's no rule how much of the object should be made isImmutable. It can be only one property or whole object (all properties) if wanted.  
     * Nested immutability is not enforced, thus property can contain another mutable object.
     * Immutable properties can be still changed inside the owner object.
-* To prevent ambiguity, immutable properties must be changed using  method `with` instead of `set`. Using `set` results in exception.
-* Unsetting immutable properties is not possible and results in exception.
+* To prevent ambiguity, isImmutable properties must be changed using  method `with` instead of `set`. Using `set` results in exception.
+* Unsetting isImmutable properties is not possible and results in exception.
 
 ### Mutator
 
 Sometimes it's handy to proxy the setter value through some intermediate method before assigning to property. This method is called _mutator_ and can be specified as second parameter for the `#[Set]` attribute:
+
 ```php
-use margusk\Accessors\Attributes\{
+use margusk\Accessors\Attr\{
     Get, Set
 };
 use margusk\Accessors\Accessible;
@@ -291,8 +297,9 @@ Specified callable must accept assignable value as first parameter and must retu
 ### Unsetting property
 
 It's also possible to unset property's value by using attribute `#[Delete]`:
+
 ```php
-use margusk\Accessors\Attributes\{
+use margusk\Accessors\Attr\{
     Get, Delete
 };
 use margusk\Accessors\Accessible;
@@ -316,8 +323,9 @@ Why `Delete` in attribute name instead of `Unset`? Because `Unset` is reserved w
 ### Existing getter/setter methods
 
 The library can also work with existing setter/getter methods:
+
 ```php
-use margusk\Accessors\Attributes\{
+use margusk\Accessors\Attr\{
     Get, Set
 };
 use margusk\Accessors\Accessible;
@@ -359,7 +367,7 @@ Notes:
 Attribute inheritance works intuitively. Attributes in parent class declaration are inherited by child class and can be overwritten (except `ICase` and `Immutable`):
 
 ```php
-use margusk\Accessors\Attributes\{
+use margusk\Accessors\Attr\{
     Get, Set
 };
 use margusk\Accessors\Accessible;
@@ -389,8 +397,9 @@ $obj->prop2 = 'value'; // Throws BadMethodCallException
 
 Following rules apply when dealing with case sensitivity in property names:
 1. When accessed through method and property name is part of method name, then it's treated case-insensitive. Thus if for whatever reason you have names which only differ in case, then the last defined property is used:
+
 ```php
-use margusk\Accessors\Attributes\{
+use margusk\Accessors\Attr\{
     Get, Set
 };
 use margusk\Accessors\Accessible;
@@ -417,8 +426,9 @@ echo $obj->Prop1;               // Throws InvalidArgumentException
 ```
   
 Case-insensitivity for all situations can be turned on by adding `ICase` attribute to class declaration. Attribute must be added to whole class (thus not to properties) and can't be reverted in child classes to prevent ambiguouty in the class hierarchy.
+
 ```php
-use margusk\Accessors\Attributes\{
+use margusk\Accessors\Attr\{
     Get, Set, ICase
 };
 use margusk\Accessors\Accessible;
@@ -444,8 +454,9 @@ However the recommended way is leave the case-sensitivity on and always access t
 Using magic methods brings the disadvantages of losing IDE autocompletion and make static code analyzers grope in the dark.
 
 To inform static code parsers about available magic methods and properties, PHPDoc [@method](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/method.html) and/or [@property](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) tags can be specified in front of the class:
+
 ```php
-use margusk\Accessors\Attributes\{
+use margusk\Accessors\Attr\{
     Get, Set
 };
 use margusk\Accessors\Accessible;
@@ -483,7 +494,7 @@ class A
 3. Attribute `#[ICase]`:
    * `margusk\Accessors\Attributes\ICase()`: make accessing the property names case-insensitive. This can be added only to class declaration and can't be reverted later.
 4. Attribute `#[Immutable]`:
-   * `margusk\Accessors\Attributes\Immutable()`: turn on immutable flag for single property or whole class. Once the flag is added, it can't be reverted later. 
+   * `margusk\Accessors\Attributes\Immutable()`: turn on isImmutable flag for single property or whole class. Once the flag is added, it can't be reverted later. 
 
 Note:
    * `null` value can be also used for `$enabled`, if you don't want to change the setting inherited from parent's declaration. This is currently useful only for `#[Set]` attribute where in class declaration there is default _mutator_ method defined and it needs to be changed by inherited class or property.
@@ -503,7 +514,7 @@ To update the value of property `$prop1`:
 * `$obj->set(['prop1' => 'value1', 'prop2' => 'value2', ..., 'propN' => 'valueN');`
 * `$obj->prop1('some value');`
 
-To update the value of immutable property `$prop1`:
+To update the value of isImmutable property `$prop1`:
 * `$cloned = $obj->withProp1('some value');`
 * `$cloned = $obj->with('prop1', 'some value');`
 * `$cloned = $obj->with(['prop1' => 'value1', 'prop2' => 'value2', ..., 'propN' => 'valueN');`
