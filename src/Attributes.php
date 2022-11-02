@@ -16,36 +16,23 @@ use margusk\Accessors\Exception\InvalidArgumentException;
 use ReflectionClass;
 use ReflectionProperty;
 
-/** @var array<class-string, Attr> */
-const _AVAILABLE_ATTR_LIST = [
-    Get::class          => new Get(false),
-    Set::class          => new Set(false),
-    Delete::class       => new Delete(false),
-    Mutator::class      => new Mutator(null),
-    ICase::class        => new ICase(false),
-    Immutable::class    => new Immutable(false),
-];
-
 class Attributes
 {
-    /** @var array<string, Attr|null> */
+    /** @var array<class-string, Attr> */
     private array $attributes;
 
-    /** @var array<string, bool> */
+    /** @var array<class-string, bool> */
     private array $attributeIsSet;
-
-    /** @var array<class-string, Attr> */
-    public const AVAILABLE_ATTR_LIST = _AVAILABLE_ATTR_LIST;
 
     /**
      * @param  ReflectionClass<object>|ReflectionProperty  $rfObject
      */
     public function __construct(ReflectionClass|ReflectionProperty $rfObject)
     {
-        // Initialize attributes array with <null> values
-        $this->attributes = self::AVAILABLE_ATTR_LIST;
+        // Initialize attribute arrays
+        $this->attributes = self::availableAttrList();
         $this->attributeIsSet = array_fill_keys(
-            array_keys(self::AVAILABLE_ATTR_LIST),
+            array_keys($this->attributes),
             false
         );
 
@@ -75,7 +62,7 @@ class Attributes
     {
         $new = clone $this;
 
-        foreach (self::AVAILABLE_ATTR_LIST as $n => $dummy) {
+        foreach ($this->attributes as $n => $dummy) {
             if (false === $new->attributeIsSet[$n] && true === $parent->attributeIsSet[$n]) {
                 $new->attributes[$n] = $parent->attributes[$n];
                 $new->attributeIsSet[$n] = true;
@@ -92,5 +79,26 @@ class Attributes
         }
 
         return $this->attributes[$name];
+    }
+
+    /**
+     * @return array<class-string, Attr>
+     */
+    public static function availableAttrList(): array
+    {
+        static $cached = null;
+
+        if (null === $cached) {
+            $cached = [
+                Get::class          => new Get(false),
+                Set::class          => new Set(false),
+                Delete::class       => new Delete(false),
+                Mutator::class      => new Mutator(null),
+                ICase::class        => new ICase(false),
+                Immutable::class    => new Immutable(false),
+            ];
+        }
+
+        return $cached;
     }
 }
