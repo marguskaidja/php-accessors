@@ -30,7 +30,15 @@ class Attributes
     public function __construct(ReflectionClass|ReflectionProperty $rfObject)
     {
         // Initialize attribute arrays
-        $this->attributes = self::availableAttrList();
+        $this->attributes = [
+            Get::class          => null,
+            Set::class          => null,
+            Delete::class       => null,
+            Mutator::class      => null,
+            ICase::class        => null,
+            Immutable::class    => null,
+        ];
+
         $this->attributeIsSet = array_fill_keys(
             array_keys($this->attributes),
             false
@@ -40,18 +48,9 @@ class Attributes
         foreach ($rfObject->getAttributes() as $rfAttribute) {
             $n = $rfAttribute->getName();
 
-            if (isset($this->attributes[$n])) {
+            if (true === array_key_exists($n, $this->attributes)) {
                 /** @var Attr $inst */
                 $inst = $rfAttribute->newInstance();
-
-                if ($n === ICase::class && !$inst->enabled()) {
-                    throw InvalidArgumentException::dueCaseInsensitivityCantBeSetToFalse($rfObject);
-                } else {
-                    if ($n === Immutable::class && !$inst->enabled()) {
-                        throw InvalidArgumentException::dueImmutableCantBeSetToFalse($rfObject);
-                    }
-                }
-
                 $this->attributes[$n] = $inst;
                 $this->attributeIsSet[$n] = true;
             }
@@ -74,35 +73,10 @@ class Attributes
 
     public function get(string $name): ?Attr
     {
-        if (!isset($this->attributes[$name])) {
+        if (false === array_key_exists($name, $this->attributes)) {
             throw InvalidArgumentException::dueInvalidAttrRequested($name);
         }
 
-        if (false === $this->attributeIsSet[$name]) {
-            return null;
-        }
-
         return $this->attributes[$name];
-    }
-
-    /**
-     * @return array<class-string, Attr>
-     */
-    public static function availableAttrList(): array
-    {
-        static $cached = null;
-
-        if (null === $cached) {
-            $cached = [
-                Get::class          => new Get(false),
-                Set::class          => new Set(false),
-                Delete::class       => new Delete(false),
-                Mutator::class      => new Mutator(null),
-                ICase::class        => new ICase(),
-                Immutable::class    => new Immutable(),
-            ];
-        }
-
-        return $cached;
     }
 }
