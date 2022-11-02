@@ -69,10 +69,8 @@ final class ClassConf
         // Parse attributes of current class and all it's ancestors
         if (!isset(self::$attributes[$this->name])) {
             /** @var class-string[] $classHierarchy */
-            $classHierarchy = array_reverse([
-                $this->name,
-                ...(array)class_parents($this->name)
-            ]);
+            $classHierarchy = array_reverse((array)class_parents($this->name));
+            $classHierarchy[] = $this->name;
 
             $prevAttributes = null;
 
