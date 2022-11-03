@@ -13,12 +13,7 @@ declare(strict_types=1);
 namespace margusk\Accessors;
 
 use Closure;
-use margusk\Accessors\Attr\Delete;
-use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Attr\ICase;
-use margusk\Accessors\Attr\Immutable;
-use margusk\Accessors\Attr\Mutator;
-use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
 use ReflectionClass;
 use ReflectionMethod;
@@ -42,12 +37,16 @@ final class ClassConf
     /** @var PropertyConf[] */
     private array $propertiesByLcase = [];
 
+    /** @var Closure */
     private Closure $getter;
 
+    /** @var Closure */
     private Closure $setter;
 
+    /** @var Closure */
     private Closure $unSetter;
 
+    /** @var Closure */
     private Closure $isSetter;
 
     /**
@@ -81,7 +80,7 @@ final class ClassConf
                     $attributes = new Attributes($rf);
 
                     if (null !== $prevAttributes) {
-                        $attributes = $attributes->mergeParent($prevAttributes);
+                        $attributes = $attributes->mergeToParent($prevAttributes);
                     }
 
                     self::$attributes[$name] = $attributes;

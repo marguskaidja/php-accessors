@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * This file is part of the margusk/accessors package.
+ *
+ * @author  Margus Kaidja <margusk@gmail.com>
+ * @link    https://github.com/marguskaidja/php-accessors
+ * @license http://www.opensource.org/licenses/mit-license.php MIT (see the LICENSE file)
+ */
+
 declare(strict_types=1);
 
 namespace margusk\Accessors;
@@ -12,59 +20,54 @@ use margusk\Accessors\Attr\{
     Mutator,
     Set
 };
-use margusk\Accessors\Exception\InvalidArgumentException;
+use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionProperty;
 
 class Attributes
 {
-    /** @var array<class-string, Attr> */
-    private array $attributes;
+    /** @var class-string[] */
+    public const AVAILABLE_ATTR_NAMES = [
+        Get::class,
+        Set::class,
+        Delete::class,
+        Mutator::class,
+        ICase::class,
+        Immutable::class
+    ];
 
-    /** @var array<class-string, bool> */
-    private array $attributeIsSet;
+    /** @var array<class-string, Attr|null> */
+    private array $attributes;
 
     /**
      * @param  ReflectionClass<object>|ReflectionProperty  $rfObject
      */
     public function __construct(ReflectionClass|ReflectionProperty $rfObject)
     {
-        // Initialize attribute arrays
-        $this->attributes = [
-            Get::class          => null,
-            Set::class          => null,
-            Delete::class       => null,
-            Mutator::class      => null,
-            ICase::class        => null,
-            Immutable::class    => null,
-        ];
-
-        $this->attributeIsSet = array_fill_keys(
-            array_keys($this->attributes),
-            false
-        );
+        $this->attributes = array_fill_keys(self::AVAILABLE_ATTR_NAMES, null);
 
         // Read attributes from reflection object
-        foreach ($rfObject->getAttributes() as $rfAttribute) {
+        foreach ($rfObject->getAttributes(
+            Attr::class,
+            ReflectionAttribute::IS_INSTANCEOF
+        ) as $rfAttribute) {
             $n = $rfAttribute->getName();
 
             if (true === array_key_exists($n, $this->attributes)) {
                 /** @var Attr $inst */
                 $inst = $rfAttribute->newInstance();
                 $this->attributes[$n] = $inst;
-                $this->attributeIsSet[$n] = true;
             }
         }
     }
 
-    public function mergeParent(Attributes $parent): static
+    public function mergeToParent(Attributes $parent): static
     {
         $new = clone $this;
 
-        foreach ($this->attributes as $n => $dummy) {
-            if (false === $new->attributeIsSet[$n] && true === $parent->attributeIsSet[$n]) {
+        foreach (self::AVAILABLE_ATTR_NAMES as $n) {
+            if (null === $new->attributes[$n]) {
                 $new->attributes[$n] = $parent->attributes[$n];
-                $new->attributeIsSet[$n] = true;
             }
         }
 
@@ -73,10 +76,6 @@ class Attributes
 
     public function get(string $name): ?Attr
     {
-        if (false === array_key_exists($name, $this->attributes)) {
-            throw InvalidArgumentException::dueInvalidAttrRequested($name);
-        }
-
-        return $this->attributes[$name];
+        return $this->attributes[$name] ?? null;
     }
 }

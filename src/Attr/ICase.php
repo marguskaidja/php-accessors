@@ -20,6 +20,7 @@ class ICase extends Attr
 {
     public function __construct()
     {
+        /** @noinspection PhpRedundantOptionalArgumentInspection */
         parent::__construct(true);
     }
 }

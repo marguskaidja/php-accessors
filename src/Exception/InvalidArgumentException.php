@@ -12,21 +12,8 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Exception;
 
-use ReflectionClass;
-use ReflectionProperty;
-
 final class InvalidArgumentException extends \InvalidArgumentException
 {
-    public static function dueInvalidAttrRequested(string $name): self
-    {
-        return new self(
-            sprintf(
-                'invalid attribute %s requested',
-                $name
-            )
-        );
-    }
-
     /**
      * @param  string   $class
      * @param  string   $property
@@ -44,56 +31,6 @@ final class InvalidArgumentException extends \InvalidArgumentException
                 $property
             )
         );
-    }
-
-    /**
-     * @param  ReflectionClass<object>|ReflectionProperty  $reflection
-     *
-     * @return static
-     */
-    public static function dueCaseInsensitivityCantBeSetToFalse(ReflectionClass|ReflectionProperty $reflection): self
-    {
-        if ($reflection instanceof ReflectionClass) {
-            /** @var ReflectionClass<object> $reflection */
-            $msg = sprintf(
-                'case sensitivity attribute can\'t be set to false for class %s',
-                $reflection->getName()
-            );
-        } else {
-            /** @var ReflectionProperty $reflection */
-            $msg = sprintf(
-                'case sensitivity attribute can\'t be set to false for property %s::$%s',
-                $reflection->class,
-                $reflection->getName()
-            );
-        }
-
-        return new self($msg);
-    }
-
-    /**
-     * @param  ReflectionClass<object>|ReflectionProperty  $reflection
-     *
-     * @return static
-     */
-    public static function dueImmutableCantBeSetToFalse(ReflectionClass|ReflectionProperty $reflection): self
-    {
-        if ($reflection instanceof ReflectionClass) {
-            /** @var ReflectionClass<object> $reflection */
-            $msg = sprintf(
-                'immutable attribute can\'t be set to false for class %s',
-                $reflection->getName()
-            );
-        } else {
-            /** @var ReflectionProperty $reflection */
-            $msg = sprintf(
-                'immutable attribute can\'t be set to false for property %s::$%s',
-                $reflection->class,
-                $reflection->getName()
-            );
-        }
-
-        return new self($msg);
     }
 
     public static function dueTriedToGetUnknownProperty(string $class, string $property): self
