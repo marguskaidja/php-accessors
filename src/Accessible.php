@@ -19,8 +19,8 @@ use ReflectionException;
 trait Accessible
 {
     /**
-     * @param  string  $method
-     * @param  mixed[] $args
+     * @param  string   $method
+     * @param  mixed[]  $args
      *
      * @return mixed
      * @throws ReflectionException
@@ -99,7 +99,6 @@ trait Accessible
                         count($args) + 1
                     );
                 }
-
                 /** @var string $propertyName */
             } else {
                 // If we arrive here, then property name was specified partially or fully in method name and
@@ -180,8 +179,8 @@ trait Accessible
             }
         } else {
             /** @var 'get'|'isset'|'unset' $accessorMethod */
-            $accessorImpl = match($accessorMethod) {
-                'get'   => $classConf->getGetter(),
+            $accessorImpl = match ($accessorMethod) {
+                'get' => $classConf->getGetter(),
                 'isset' => $classConf->getIsSetter(),
                 'unset' => $classConf->getUnSetter()
             };

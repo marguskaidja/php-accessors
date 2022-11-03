@@ -12,10 +12,10 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
+use margusk\Accessors\Accessible;
 use margusk\Accessors\Attr\Mutator;
 use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
-use margusk\Accessors\Accessible;
 
 class SetTest extends TestCase
 {
@@ -164,7 +164,10 @@ class SetTest extends TestCase
         };
 
         $values = [
-            'value0', 'value1', 'value2', 'value3'
+            'value0',
+            'value1',
+            'value2',
+            'value3'
         ];
 
         /** @phpstan-ignore-next-line */
@@ -182,7 +185,7 @@ class SetTest extends TestCase
 
     public function test_mutator_function_must_be_called_in_setter(): void
     {
-        $obj = new #[Set,Mutator("htmlspecialchars")] class {
+        $obj = new #[Set, Mutator("htmlspecialchars")] class {
             use Accessible;
 
             protected string $p1;
@@ -203,7 +206,7 @@ class SetTest extends TestCase
 
     public function test_class_mutator_method_with_property_substition_must_be_called(): void
     {
-        $obj = new #[Set,Mutator([ParentTestClass::class, "staticMutate%property%"])] class {
+        $obj = new #[Set, Mutator([ParentTestClass::class, "staticMutate%property%"])] class {
             use Accessible;
 
             protected string $p1;
@@ -224,7 +227,7 @@ class SetTest extends TestCase
 
     public function test_object_mutator_method_with_propertyname_substitution_must_be_called(): void
     {
-        $obj = new #[Set,Mutator('$this->mutate%property%')] class {
+        $obj = new #[Set, Mutator('$this->mutate%property%')] class {
             use Accessible;
 
             protected string $p1;
@@ -250,7 +253,7 @@ class SetTest extends TestCase
 
     public function test_disable_mutator_with_property_attribute_override(): void
     {
-        $obj = new #[Set,Mutator("htmlspecialchars")] class {
+        $obj = new #[Set, Mutator("htmlspecialchars")] class {
             use Accessible;
 
             #[Mutator(null)]

@@ -12,14 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\Accessors;
 
-use margusk\Accessors\Attr\{
-    Delete,
-    Get,
-    ICase,
-    Immutable,
-    Mutator,
-    Set
-};
+use margusk\Accessors\Attr\{Delete, Get, ICase, Immutable, Mutator, Set};
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionProperty;
@@ -27,14 +20,15 @@ use ReflectionProperty;
 class Attributes
 {
     /** @var class-string[] */
-    public const AVAILABLE_ATTR_NAMES = [
-        Get::class,
-        Set::class,
-        Delete::class,
-        Mutator::class,
-        ICase::class,
-        Immutable::class
-    ];
+    public const AVAILABLE_ATTR_NAMES
+        = [
+            Get::class,
+            Set::class,
+            Delete::class,
+            Mutator::class,
+            ICase::class,
+            Immutable::class
+        ];
 
     /** @var array<class-string, Attr|null> */
     private array $attributes;

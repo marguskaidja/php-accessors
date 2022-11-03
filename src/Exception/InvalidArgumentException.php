@@ -15,9 +15,9 @@ namespace margusk\Accessors\Exception;
 final class InvalidArgumentException extends \InvalidArgumentException
 {
     /**
-     * @param  string   $class
-     * @param  string   $property
-     * @param  string[] $callable
+     * @param  string  $class
+     * @param  string  $property
+     * @param  string[]  $callable
      *
      * @return static
      */
@@ -133,8 +133,11 @@ final class InvalidArgumentException extends \InvalidArgumentException
         );
     }
 
-    public static function dueMultiPropertyArrayContainsNonStringProperty(string $class, string $method, mixed $nonStringValue): self
-    {
+    public static function dueMultiPropertyArrayContainsNonStringProperty(
+        string $class,
+        string $method,
+        mixed $nonStringValue
+    ): self {
         return new self(
             sprintf(
                 'property names in multi-property array be strings for method %s::%s() (%s encountered)',
@@ -145,8 +148,11 @@ final class InvalidArgumentException extends \InvalidArgumentException
         );
     }
 
-    public static function dueMethodIsMissingPropertyValueArgument(string $class, string $method, int $expectedArgIdx): self
-    {
+    public static function dueMethodIsMissingPropertyValueArgument(
+        string $class,
+        string $method,
+        int $expectedArgIdx
+    ): self {
         return new self(
             sprintf(
                 'missing argument #%u (property value) to method %s::%s()',
@@ -157,8 +163,11 @@ final class InvalidArgumentException extends \InvalidArgumentException
         );
     }
 
-    public static function dueMethodHasMoreArgumentsThanExpected(string $class, string $method, int $expectedArgCount): self
-    {
+    public static function dueMethodHasMoreArgumentsThanExpected(
+        string $class,
+        string $method,
+        int $expectedArgCount
+    ): self {
         return new self(
             sprintf(
                 'expecting exactly %u argument(s) to method %s::%s()',

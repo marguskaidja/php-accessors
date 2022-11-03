@@ -28,7 +28,7 @@ class PropertyConf
     /** @var Attributes */
     private Attributes $attr;
 
-    /** @var string|array<int, null|string>|null  */
+    /** @var string|array<int, null|string>|null */
     private string|array|null $mutatorCallback = null;
 
     /** @var bool */
@@ -47,16 +47,15 @@ class PropertyConf
     private bool $isPublic;
 
     /**
-     * @param  ReflectionProperty       $rfProperty
-     * @param  Attributes               $classAttr
-     * @param  array<string, string>    $handlerMethodNames
+     * @param  ReflectionProperty     $rfProperty
+     * @param  Attributes             $classAttr
+     * @param  array<string, string>  $handlerMethodNames
      */
     public function __construct(
         ReflectionProperty $rfProperty,
         Attributes $classAttr,
         private array $handlerMethodNames
-    )
-    {
+    ) {
         $this->name = $rfProperty->getName();
         $this->isPublic = $rfProperty->isPublic();
 
@@ -103,12 +102,14 @@ class PropertyConf
                         $check
                     );
                 }
-            } else if (null !== $mutatorCb && !is_callable($mutatorCb)) {
-                throw InvalidArgumentException::dueInvalidMutatorCallback(
-                    $rfProperty->class,
-                    $this->name,
-                    $mutatorCb
-                );
+            } else {
+                if (null !== $mutatorCb && !is_callable($mutatorCb)) {
+                    throw InvalidArgumentException::dueInvalidMutatorCallback(
+                        $rfProperty->class,
+                        $this->name,
+                        $mutatorCb
+                    );
+                }
             }
 
             $this->mutatorCallback = $mutatorCb;
@@ -117,14 +118,9 @@ class PropertyConf
         }
     }
 
-    public function name(): string
+    public function isPublic(): bool
     {
-        return $this->name;
-    }
-
-    public function attr(): Attributes
-    {
-        return $this->attr;
+        return $this->isPublic;
     }
 
     public function mutator(object $object): ?callable
@@ -141,6 +137,16 @@ class PropertyConf
 
         /** @var callable|null $mutatorCb */
         return $mutatorCb;
+    }
+
+    public function name(): string
+    {
+        return $this->name;
+    }
+
+    public function attr(): Attributes
+    {
+        return $this->attr;
     }
 
     public function isImmutable(): bool
@@ -161,11 +167,6 @@ class PropertyConf
     public function isUnsettable(): bool
     {
         return $this->isUnsettable;
-    }
-
-    public function isPublic(): bool
-    {
-        return $this->isPublic;
     }
 
     public function handlerMethodName(string $accessor): ?string

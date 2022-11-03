@@ -16,9 +16,9 @@ use Closure;
 use margusk\Accessors\Attr\ICase;
 use margusk\Accessors\Exception\InvalidArgumentException;
 use ReflectionClass;
+use ReflectionException;
 use ReflectionMethod;
 use ReflectionProperty;
-use ReflectionException;
 
 final class ClassConf
 {
@@ -56,8 +56,7 @@ final class ClassConf
      */
     private function __construct(
         protected string $name
-    )
-    {
+    ) {
         $this->rfClass = new ReflectionClass($this->name);
 
         $this->getter = $this->createGetter();
@@ -75,7 +74,7 @@ final class ClassConf
 
             foreach ($classHierarchy as $name) {
                 if (!isset(self::$attributes[$name])) {
-                    $rf = ($name === $this->name) ? $this->rfClass :  new ReflectionClass($name);
+                    $rf = ($name === $this->name) ? $this->rfClass : new ReflectionClass($name);
 
                     $attributes = new Attributes($rf);
 
@@ -97,9 +96,11 @@ final class ClassConf
          */
         $handlerMethodNames = [];
 
-        foreach ($this->rfClass->getMethods(
-            ReflectionMethod::IS_PROTECTED | ReflectionMethod::IS_PRIVATE | ReflectionMethod::IS_PUBLIC
-        ) as $rfMethod) {
+        foreach (
+            $this->rfClass->getMethods(
+                ReflectionMethod::IS_PROTECTED | ReflectionMethod::IS_PRIVATE | ReflectionMethod::IS_PUBLIC
+            ) as $rfMethod
+        ) {
             if (!$rfMethod->isStatic()
                 && preg_match(
                     '/^(set|get|isset|unset|with)(.+)/',
@@ -107,7 +108,7 @@ final class ClassConf
                     $matches
                 )
             ) {
-                $handlerMethodNames[(string) $matches[2]][(string) $matches[1]] = $rfMethod->name;
+                $handlerMethodNames[(string)$matches[2]][(string)$matches[1]] = $rfMethod->name;
             }
         }
 
@@ -120,9 +121,11 @@ final class ClassConf
          * we'll need to remember them along with private and protected properties, so in case they are accessed,
          * informative error can be reported.
          */
-        foreach ($this->rfClass->getProperties(
-            ReflectionMethod::IS_PRIVATE | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PUBLIC
-        ) as $rfProperty) {
+        foreach (
+            $this->rfClass->getProperties(
+                ReflectionMethod::IS_PRIVATE | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PUBLIC
+            ) as $rfProperty
+        ) {
             $name = $rfProperty->getName();
             $nameLowerCase = strtolower($name);
 
@@ -134,64 +137,6 @@ final class ClassConf
 
             $this->propertiesByLcase[$nameLowerCase] = $this->properties[$name];
         }
-    }
-
-    public function findPropertyConf(string $name, bool $forceCaseInsensitive = false): ?PropertyConf
-    {
-        if ($forceCaseInsensitive) {
-            $caseInsensitive = true;
-        } else {
-            $caseInsensitive = self::$attributes[$this->name]
-                ->get(ICase::class)
-                ?->enabled();
-        }
-
-        if ($caseInsensitive) {
-            $propertyConf = $this->propertiesByLcase[strtolower($name)] ?? null;
-        } else {
-            $propertyConf = $this->properties[$name] ?? null;
-        }
-
-        return $propertyConf;
-    }
-
-    /**
-     * Parses configuration of specified class.
-     *
-     * Configuration is cached so later requests for same class are returned instantly.
-     *
-     * @param  class-string  $name Class name to create configuration for
-     *
-     * @return ClassConf
-     * @throws ReflectionException
-     */
-    public static function factory(string $name): ClassConf
-    {
-        if (!isset(self::$classes[$name])) {
-            self::$classes[$name] = new self($name);
-        }
-
-        return self::$classes[$name];
-    }
-
-    public function getGetter(): Closure
-    {
-        return $this->getter;
-    }
-
-    public function getSetter(): Closure
-    {
-        return $this->setter;
-    }
-
-    public function getIsSetter(): Closure
-    {
-        return $this->isSetter;
-    }
-
-    public function getUnSetter(): Closure
-    {
-        return $this->unSetter;
     }
 
     private function createGetter(): Closure
@@ -263,6 +208,31 @@ final class ClassConf
         })->bindTo(null, $this->name);
     }
 
+    private function createIssetter(): Closure
+    {
+        return (function (object $object, string $name, ?PropertyConf $propertyConf): bool {
+            if (null === $propertyConf) {
+                throw InvalidArgumentException::dueTriedToGetUnknownProperty(self::class, $name);
+            }
+
+            if (false === $propertyConf->isGettable()) {
+                if ($propertyConf->isPublic()) {
+                    throw InvalidArgumentException::dueTriedToGetPublicProperty(self::class, $name);
+                }
+
+                throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(self::class, $name);
+            }
+
+            $handler = $propertyConf->handlerMethodName('isset');
+
+            if (null !== $handler) {
+                return (bool)$object->{$handler}();
+            }
+
+            return isset($object->{$propertyConf->name()});
+        })->bindTo(null, $this->name);
+    }
+
     private function createUnsetter(): Closure
     {
         return (function (object $object, string $name, ?PropertyConf $propertyConf): object {
@@ -297,28 +267,61 @@ final class ClassConf
         })->bindTo(null, $this->name);
     }
 
-    private function createIssetter(): Closure
+    /**
+     * Parses configuration of specified class.
+     *
+     * Configuration is cached so later requests for same class are returned instantly.
+     *
+     * @param  class-string  $name  Class name to create configuration for
+     *
+     * @return ClassConf
+     * @throws ReflectionException
+     */
+    public static function factory(string $name): ClassConf
     {
-        return (function (object $object, string $name, ?PropertyConf $propertyConf): bool {
-            if (null === $propertyConf) {
-                throw InvalidArgumentException::dueTriedToGetUnknownProperty(self::class, $name);
-            }
+        if (!isset(self::$classes[$name])) {
+            self::$classes[$name] = new self($name);
+        }
 
-            if (false === $propertyConf->isGettable()) {
-                if ($propertyConf->isPublic()) {
-                    throw InvalidArgumentException::dueTriedToGetPublicProperty(self::class, $name);
-                }
+        return self::$classes[$name];
+    }
 
-                throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(self::class, $name);
-            }
+    public function findPropertyConf(string $name, bool $forceCaseInsensitive = false): ?PropertyConf
+    {
+        if ($forceCaseInsensitive) {
+            $caseInsensitive = true;
+        } else {
+            $caseInsensitive = self::$attributes[$this->name]
+                ->get(ICase::class)
+                ?->enabled();
+        }
 
-            $handler = $propertyConf->handlerMethodName('isset');
+        if ($caseInsensitive) {
+            $propertyConf = $this->propertiesByLcase[strtolower($name)] ?? null;
+        } else {
+            $propertyConf = $this->properties[$name] ?? null;
+        }
 
-            if (null !== $handler) {
-                return (bool)$object->{$handler}();
-            }
+        return $propertyConf;
+    }
 
-            return isset($object->{$propertyConf->name()});
-        })->bindTo(null, $this->name);
+    public function getGetter(): Closure
+    {
+        return $this->getter;
+    }
+
+    public function getSetter(): Closure
+    {
+        return $this->setter;
+    }
+
+    public function getIsSetter(): Closure
+    {
+        return $this->isSetter;
+    }
+
+    public function getUnSetter(): Closure
+    {
+        return $this->unSetter;
     }
 }

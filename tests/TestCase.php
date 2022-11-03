@@ -22,8 +22,7 @@ class TestCase extends TestCaseBase
         object $actual,
         string $method = 'equals',
         string $message = ''
-    ): void
-    {
+    ): void {
         static::assertThat(
             $actual,
             new LogicalNot(static::objectEquals($expected, $method)),

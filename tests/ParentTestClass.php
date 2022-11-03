@@ -12,10 +12,10 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
+use margusk\Accessors\Accessible;
 use margusk\Accessors\Attr\Delete;
 use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Attr\Set;
-use margusk\Accessors\Accessible;
 
 /**
  * @property string $parentProperty

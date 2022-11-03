@@ -26,8 +26,7 @@ class Mutator extends Attr
      */
     public function __construct(
         string|array|null $mutator
-    )
-    {
+    ) {
         if (is_string($mutator)) {
             if (preg_match('/^\$this->(.+)/', trim($mutator), $matches)) {
                 $mutator = [null, $matches[1]];

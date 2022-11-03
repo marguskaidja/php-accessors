@@ -43,8 +43,10 @@ final class BadMethodCallException extends \BadMethodCallException
         );
     }
 
-    public static function dueImmutablePropertiesCantBeSetUsingAssignmentOperator(string $class, string $propertyName): self
-    {
+    public static function dueImmutablePropertiesCantBeSetUsingAssignmentOperator(
+        string $class,
+        string $propertyName
+    ): self {
         return new self(
             sprintf(
                 'immutable property "%s::$%s" can\'t be set using assignment operator (use with%s() method instead)',

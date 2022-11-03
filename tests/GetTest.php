@@ -12,9 +12,9 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
+use margusk\Accessors\Accessible;
 use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Exception\InvalidArgumentException;
-use margusk\Accessors\Accessible;
 
 class GetTest extends TestCase
 {
