@@ -365,17 +365,17 @@ var_dump($opj->prop1Set); // Outputs "bool(true)"
 
 Notes:
 * To be able to use existing method, it must start with `set`, `get`, `isset`, `unset` or `with` prefix and follow with property name.
-* Method's visibility must be `public` and non-static. `private` and `protected` methods are ignored.
-* In case existing `set` method is used, the _mutator_ method is not called. Mutating should be done inside existing `set<property>` method.
+* It must be non-static.
+* All visibility levels work but with minor difference in that `public` handlers are called natively by the engine. `private` and `protected` can't be called outside, thus they are passed through `__call` provided by `Accessible` trait.
+* In case existing `set` method is used, the _mutator_ method is not called. Mutating should be done inside handler.
 * Return values:
-  * from existing `get` and `isset` methods are proxied back to original caller.
-  * from existing `set` and `unset` methods are discarded.
-  * from existing `with` method is proxied back to original caller only if the result is `object` and derives from current class. Other return values are silently discarded and original caller gets `clone`-d object instance.
+  * from `get` and `isset` handlers are handed over to caller.
+  * from `set` and `unset` handler are discarded and current object instance is always returned. 
+  * from `with` handler is handed over to original caller only if the result is `object` and is derived from current class. Other values are discarded and original caller gets `clone`-d object instance.
 
-   
 ### Class inheritance
 
-Attribute inheritance works intuitively. Attributes in parent class declaration are inherited by child class and can be overwritten (except `ICase` and `Immutable`):
+Attribute inheritance works intuitively. Attributes in parent class declaration are inherited by children and can be overwritten (except `ICase` and `Immutable`):
 
 ```php
 use margusk\Accessors\Attr\{
