@@ -1,12 +1,12 @@
 [![Tests](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml/badge.svg)](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml)
 # Accessors
 
-This library can provide automatic accessors for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class.
+Current library can create automatic accessors for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class.
 
-Then, in case `protected`  property (_inaccessible for outside world_) is beeing accessed, property overloader will intervene and handle the situation depending of configuration.
+Then, in case an `private`/`protected` (_inaccessible for outside_) property is beeing accessed, property overloader will kick in and depending of configuration access is beeing granted or denied.
 
-Following features are present:
-* Various syntax to choose from:
+#### Features
+* Multiple accessor syntaxes to choose from:
   * direct assignment syntax:
     * `$value = $foo->property`
     * `$foo->property = 'value'`
@@ -15,8 +15,11 @@ Following features are present:
     * `$foo->setProperty('value')`
     * `$foo->set('property1', 'value1')`
     * `$foo->set(['property1' => 'value1', 'property2' => 'value2'])`
-* All properties in a class can be marked accessible at once or one-by-one.
-* Easy and unbloated configuration, implemented purely using [Attributes](https://www.php.net/manual/en/language.attributes.overview.php), which is native, fast and involves no DocBlock parsing. Also, no potentially conflicting data has to be injected into the class nor custom initialization code to be called to make things work.
+* Easy configuration, implemented using [Attributes](https://www.php.net/manual/en/language.attributes.overview.php): 
+  * No custom initialization code has to be called to make things work.
+  * Access can be configured one-by-one per property or for all properties at once.
+  * Inheritance and override support.
+  * Classes nor global namespace will never be polluted with potentially conflicting data other than only implementations of `__get()`/`__set()`/`__isset()`/`__unset()`/`__call()`
 * _Weak_ immutability support backed by _wither_ methods.
 * Mutator support for _setters_.
 
@@ -32,7 +35,7 @@ Install with composer:
 composer require margusk/accessors
 ```
 
-## Basic Usage
+## Usage
 
 Consider following class with manually generated accessor methods:
 ```php
@@ -93,7 +96,17 @@ echo $a->getProp2() . "\n";  // Outputs "value2"
 echo $a->getProp3() . "\n";  // Outputs "value3"
 ```
 
-If you have lot's of properties to expose, then it's not reasonable to mark each one of them separately. Mark all properties at once in the class declaration:
+Using `Accessible` trait gives you automatically access to _direct assignment_ syntax, which wasn't even possible previously with manually crafted methods:
+```php
+/.../
+
+echo $a->prop1 . "\n";  // Outputs "value1"
+echo $a->prop2 . "\n";  // Outputs "value2"
+echo $a->prop3 . "\n";  // Outputs "value3"
+```
+
+### More examples
+If there's  lot's of properties to expose, then it's not reasonable to mark each one of them separately. Mark all properties at once in the class declaration:
 
 ```php
 use margusk\Accessors\Attr\Get;
@@ -130,8 +143,8 @@ class A
     protected string $prop3 = "value3";
 }
 
-// Throws InvalidArgumentException
-echo (new A())->getProp2();      
+echo (new A())->getProp1();  // Outputs "value1"
+echo (new A())->getProp2();  // Results in Exception
 ```
 What about writing to properties? Yes, just add `#[Set]` attribute:
 
@@ -156,18 +169,16 @@ class A
 
 $a = new A();
 
-// "prop1" is readable/writable
 echo $a->setProp1("new value1")->getProp1();    // Outputs "new value1"
 
-// "prop2" is only readable and throws exception if written to
-$a->setProp2("new value2");                     // Throws InvalidArgumentException
+$a->setProp2("new value2");                     // Results in Exception
 ```
 
 **Note:** If `#[Set]` is enabled on property then it should be usually combined with _mutator_ and/or made _immutable_. Although it's technically okay to allow to just modify a property without any other intervention (like in example above), it wouldn't make much sense. If just numb write access is desired, then perhaps using just `public` visibility on property should be considered, because it skips all the overhead caused by current library.
 
 ### Immutable properties
 
-Objects which allow their contents to be changed are named as **mutable**. And in contrast the ones who don't are [**isImmutable**](https://en.wikipedia.org/wiki/Immutable_object).
+Objects which allow their contents to be changed are named as **mutable**. And in contrast the ones who don't are [**immutable**](https://en.wikipedia.org/wiki/Immutable_object).
 
 When talking about immutability, then it usually means combination of restricting the changes inside the original object, but allowing to make a copy of the object with desired changes.
 
@@ -207,7 +218,7 @@ $a = new A(1, 2, 3, 4, 5, 6);
 $b = new B($a->a, $a->b,  $a->c,  $a->d,  $a->e,  7);
 ```
 
-With `#[Immutable]` flag things can be written more simpler:
+With `#[Immutable]` flag things get simpler:
 
 ```php
 use margusk\Accessors\Attr\{
@@ -252,16 +263,16 @@ echo $b->f; // Outputs "7"
 ```
 
 Notes:
-* Immutability here is implemented _weakly_, not to be confused with [strong immutability](https://en.wikipedia.org/wiki/Immutable_object#Weak_vs_strong_immutability). For example:
-    * There's no rule how much of the object should be made isImmutable. It can be only one property or whole object (all properties) if wanted.  
+* Immutability is implemented _weakly_, not to be confused with [strong immutability](https://en.wikipedia.org/wiki/Immutable_object#Weak_vs_strong_immutability). E.g.:
+    * There's no rule how much of the object should be made immutable. It can be only one property or whole object (all properties) if wanted.
     * Nested immutability is not enforced, thus property can contain another mutable object.
     * Immutable properties can be still changed inside the owner object.
-* To prevent ambiguity, isImmutable properties must be changed using  method `with` instead of `set`. Using `set` results in exception.
-* Unsetting isImmutable properties is not possible and results in exception.
+* To prevent ambiguity, immutable properties must be changed using  method `with` instead of `set`. Using `set` for immutable properties results in exception and vice versa.
+* Unsetting immutable properties is not possible and results in exception.
 
 ### Mutator
 
-Sometimes it's handy to proxy the setter value through some intermediate method before assigning to property. This method is called _mutator_ and can be specified using `#[Mutator]` attribute:
+Sometimes it's necessary to have the assignable value passed through some intermediate function/method before assigning to property. This is called _mutator_ and can be specified using `#[Mutator]` attribute:
 
 ```php
 use margusk\Accessors\Attr\{
@@ -285,18 +296,18 @@ echo (new A())->setProp1('<>')->getProp1();  // Outputs "&lt;&gt;"
 
 It can validate and/or tweak the value before beeing assigned to property.
 
-_Mutator_ parameter must be string or array representing a PHP callable. Following callable syntaxes are supported:
-1. `<function>` 
+_Mutator_ parameter must be string or array representing a PHP `callable`. When string is passed then it must have one of following syntaxes:
+1. `<function>`  
 1. `<class>::<method>` 
 1. `$this-><method>` (`$this` is replaced during runtime with the object instance where the accessor belongs)
 
 It may contain special variable named `%property%` which is replaced with the property name it applies. This is useful only when specifying mutator globally in class attribute.
 
-Specified callable must accept assignable value as first parameter and must return a value to be assigned to property.
+The callable function/method must accept assignable value as first parameter and must return a value to be assigned to property.
 
 ### Unsetting property
 
-It's also possible to unset property's value by using attribute `#[Delete]`:
+It's possible to unset property's value by using attribute `#[Delete]`:
 
 ```php
 use margusk\Accessors\Attr\{
@@ -318,11 +329,11 @@ class A
 (new A())->unsetProp1();
 ```
 
-Why `Delete` in attribute name instead of `Unset`? Because `Unset` is reserved word and can't be used as attribute nor class name.
+Notes: `Delete` is used as attribute name instead `Unset` because `Unset` is reserved word.
 
-### Existing getter/setter methods
+### Manually created accessor methods as handlers
 
-The library can also work with existing setter/getter methods:
+If an existing accessor method is encountered, then it's interpreted as the final handler for specific accessor. 
 
 ```php
 use margusk\Accessors\Attr\{
@@ -499,7 +510,7 @@ class A
 1. Attribute `#[ICase]`:
    * `margusk\Accessors\Attributes\ICase()`: make accessing the property names case-insensitive. This can be added only to class declaration and can't be reverted later.
 1. Attribute `#[Immutable]`:
-   * `margusk\Accessors\Attributes\Immutable()`: turn on isImmutable flag for single property or whole class. Once the flag is added, it can't be reverted later.
+   * `margusk\Accessors\Attributes\Immutable()`: turn on immutable flag for single property or whole class. Once the flag is added, it can't be reverted later.
 
 ### Properties can be accessed as following
 
@@ -516,7 +527,7 @@ To update the value of property `$prop1`:
 * `$obj->set(['prop1' => 'value1', 'prop2' => 'value2', ..., 'propN' => 'valueN');`
 * `$obj->prop1('some value');`
 
-To update the value of isImmutable property `$prop1`:
+To update the value of immutable property `$prop1`:
 * `$cloned = $obj->withProp1('some value');`
 * `$cloned = $obj->with('prop1', 'some value');`
 * `$cloned = $obj->with(['prop1' => 'value1', 'prop2' => 'value2', ..., 'propN' => 'valueN');`
