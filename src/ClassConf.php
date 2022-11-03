@@ -13,8 +13,19 @@ declare(strict_types=1);
 namespace margusk\Accessors;
 
 use Closure;
+use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Attr\ICase;
+use margusk\Accessors\Attr\Set;
+use margusk\Accessors\Attributes;
 use margusk\Accessors\Exception\InvalidArgumentException;
+use PHPStan\PhpDocParser\Parser\PhpDocParser;
+use PHPStan\PhpDocParser\Parser\TypeParser;
+use PHPStan\PhpDocParser\Parser\ConstExprParser;
+use PHPStan\PhpDocParser\Parser\TokenIterator;
+use PHPStan\PhpDocParser\Lexer\Lexer;
+use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocNode;
+use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocTagNode;
+use PHPStan\PhpDocParser\Ast\PhpDoc\PropertyTagValueNode;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
@@ -25,8 +36,11 @@ final class ClassConf
     /** @var self[] */
     private static array $classes = [];
 
-    /** @var array<string, Attributes> */
-    private static array $attributes = [];
+    private static $docBlockParser = null;
+    private static $docBlockLexer = null;
+
+    /** @var Attributes */
+    private Attributes $attributes;
 
     /** @var ReflectionClass<object> */
     private ReflectionClass $rfClass;
@@ -57,40 +71,27 @@ final class ClassConf
     private function __construct(
         protected string $name
     ) {
+        /* Verify that the specified class is valid in every aspect */
         $this->rfClass = new ReflectionClass($this->name);
 
-        $this->getter = $this->createGetter();
-        $this->setter = $this->createSetter();
-        $this->isSetter = $this->createIssetter();
-        $this->unSetter = $this->createUnsetter();
+        /* Parse attributes of current class */
+        $this->attributes = Attributes::fromReflection($this->rfClass);
 
-        /* Parse attributes of current class and all it's ancestors */
-        if (!isset(self::$attributes[$this->name])) {
-            /** @var class-string[] $classHierarchy */
-            $classHierarchy = array_reverse((array)class_parents($this->name));
-            $classHierarchy[] = $this->name;
+        /* Require parent class to be parsed before current class, ... */
+        $parentName = get_parent_class($this->name);
 
-            $prevAttributes = null;
-
-            foreach ($classHierarchy as $name) {
-                if (!isset(self::$attributes[$name])) {
-                    $rf = ($name === $this->name) ? $this->rfClass : new ReflectionClass($name);
-
-                    $attributes = new Attributes($rf);
-
-                    if (null !== $prevAttributes) {
-                        $attributes = $attributes->mergeToParent($prevAttributes);
-                    }
-
-                    self::$attributes[$name] = $attributes;
-                }
-
-                $prevAttributes = self::$attributes[$name];
-            }
+        /* ...because attributes from current class need to be merged with parent one's */
+        if (false !== $parentName) {
+            $parent = self::factory($parentName);
+            $this->attributes = $this->attributes->mergeWithParent($parent->attributes);
         }
 
+        /* Learn from DocBlock comments which properties should be exposed and how (read-only,write-only or both) */
+        $docBlockAttributes = $this->parsePropertiesFromDocBlock($this->rfClass);
+
         /**
-         * Find all existing set/get etc. methods which will handle the accessor functionality for each property
+         * Collect all manually generated set/get etc. methods which will handle the accessor
+         * functionality for separate properties
          *
          * @var array<string, array<string, string>> $handlerMethodNames
          */
@@ -129,14 +130,21 @@ final class ClassConf
             $name = $rfProperty->getName();
             $nameLowerCase = strtolower($name);
 
+            $attributes = $docBlockAttributes[$name] ?? $this->attributes;
+
             $this->properties[$name] = new PropertyConf(
                 $rfProperty,
-                self::$attributes[$this->name],
+                $attributes,
                 ($handlerMethodNames[$nameLowerCase] ?? [])
             );
 
             $this->propertiesByLcase[$nameLowerCase] = $this->properties[$name];
         }
+
+        $this->getter = $this->createGetter();
+        $this->setter = $this->createSetter();
+        $this->isSetter = $this->createIssetter();
+        $this->unSetter = $this->createUnsetter();
     }
 
     private function createGetter(): Closure
@@ -291,7 +299,7 @@ final class ClassConf
         if ($forceCaseInsensitive) {
             $caseInsensitive = true;
         } else {
-            $caseInsensitive = self::$attributes[$this->name]
+            $caseInsensitive = $this->attributes
                 ->get(ICase::class)
                 ?->enabled();
         }
@@ -323,5 +331,49 @@ final class ClassConf
     public function getUnSetter(): Closure
     {
         return $this->unSetter;
+    }
+
+    private function parsePropertiesFromDocBlock(ReflectionClass $rfClass): array
+    {
+        $result = [];
+
+        $docComment = $rfClass->getDocComment();
+
+        if (!is_string($docComment)) {
+            return $result;
+        }
+
+        if (null === self::$docBlockParser) {
+            $constExprParser = new ConstExprParser();
+
+            self::$docBlockParser = new PhpDocParser(
+                new TypeParser($constExprParser),
+                $constExprParser
+            );
+
+            self::$docBlockLexer = new Lexer();
+        }
+
+        $node = self::$docBlockParser->parse(
+            new TokenIterator(
+                self::$docBlockLexer->tokenize($docComment)
+            )
+        );
+
+        foreach ($node->children as $childNode) {
+            if ($childNode instanceof PhpDocTagNode
+                && $childNode->value instanceof PropertyTagValueNode
+                && str_starts_with($childNode->value->propertyName, '$')) {
+
+                $attributes = Attributes::fromDocBlock($childNode)
+                    ->mergeWithParent($this->attributes);
+
+                if (null !== $attributes) {
+                    $result[substr($childNode->value->propertyName, 1)] = $attributes;
+                }
+            }
+        }
+
+        return $result;
     }
 }

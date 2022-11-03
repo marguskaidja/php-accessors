@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\Accessors;
 
+use margusk\Accessors\Attributes;
 use margusk\Accessors\Attr\Delete;
 use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Attr\Immutable;
@@ -59,9 +60,10 @@ class PropertyConf
         $this->name = $rfProperty->getName();
         $this->isPublic = $rfProperty->isPublic();
 
+        /* Discard all attributes on public properties */
         if (false === $this->isPublic) {
-            $this->attr = (new Attributes($rfProperty))
-                ->mergeToParent($classAttr);
+            $this->attr = Attributes::fromReflection($rfProperty)
+                ->mergeWithParent($classAttr);
 
             $this->isImmutable = ($this->attr->get(Immutable::class)?->enabled()) ?? false;
             $this->isGettable = ($this->attr->get(Get::class)?->enabled()) ?? false;
@@ -114,7 +116,7 @@ class PropertyConf
 
             $this->mutatorCallback = $mutatorCb;
         } else {
-            $this->attr = new Attributes(null);
+            $this->attr = new Attributes();
         }
     }
 
