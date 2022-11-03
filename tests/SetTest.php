@@ -385,4 +385,19 @@ class SetTest extends TestCase
 
         $this->assertEquals('mutated value', $obj->getP1value());
     }
+
+    public function test_setting_public_property_must_fail(): void
+    {
+        $obj = new #[Set] class {
+            use Accessible;
+
+            public string $p1 = 'old value';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|implicit setter is not available for public properties|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->setP1('new value');
+    }
 }

@@ -65,7 +65,7 @@ final class ClassConf
         $this->isSetter = $this->createIssetter();
         $this->unSetter = $this->createUnsetter();
 
-        // Parse attributes of current class and all it's ancestors
+        /* Parse attributes of current class and all it's ancestors */
         if (!isset(self::$attributes[$this->name])) {
             /** @var class-string[] $classHierarchy */
             $classHierarchy = array_reverse((array)class_parents($this->name));
@@ -90,10 +90,16 @@ final class ClassConf
             }
         }
 
-        /** @var array<string, array<string, string>> $handlerMethodNames */
+        /**
+         * Find all existing set/get etc. methods which will handle the accessor functionality for each property
+         *
+         * @var array<string, array<string, string>> $handlerMethodNames
+         */
         $handlerMethodNames = [];
 
-        foreach ($this->rfClass->getMethods(ReflectionMethod::IS_PUBLIC) as $rfMethod) {
+        foreach ($this->rfClass->getMethods(
+            ReflectionMethod::IS_PROTECTED | ReflectionMethod::IS_PRIVATE | ReflectionMethod::IS_PUBLIC
+        ) as $rfMethod) {
             if (!$rfMethod->isStatic()
                 && preg_match(
                     '/^(set|get|isset|unset|with)(.+)/',
@@ -105,8 +111,18 @@ final class ClassConf
             }
         }
 
-        // Parse attributes of each property
-        foreach ($this->rfClass->getProperties(ReflectionProperty::IS_PROTECTED) as $rfProperty) {
+        /**
+         * Find all class properties.
+         *
+         * Provide accessor functionality only for private and protected properties.
+         *
+         * Although accessors for public properties are not provided (because it makes the behaviour unconsistent),
+         * we'll need to remember them along with private and protected properties, so in case they are accessed,
+         * informative error can be reported.
+         */
+        foreach ($this->rfClass->getProperties(
+            ReflectionMethod::IS_PRIVATE | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PUBLIC
+        ) as $rfProperty) {
             $name = $rfProperty->getName();
             $nameLowerCase = strtolower($name);
 
@@ -186,6 +202,10 @@ final class ClassConf
             }
 
             if (false === $propertyConf->isGettable()) {
+                if ($propertyConf->isPublic()) {
+                    throw InvalidArgumentException::dueTriedToGetPublicProperty(self::class, $name);
+                }
+
                 throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(self::class, $name);
             }
 
@@ -213,6 +233,10 @@ final class ClassConf
             }
 
             if (false === $propertyConf->isSettable()) {
+                if ($propertyConf->isPublic()) {
+                    throw InvalidArgumentException::dueTriedToSetPublicProperty(self::class, $name);
+                }
+
                 throw InvalidArgumentException::dueTriedToSetMisconfiguredProperty(self::class, $name);
             }
 
@@ -247,6 +271,10 @@ final class ClassConf
             }
 
             if (false === $propertyConf->isUnsettable()) {
+                if ($propertyConf->isPublic()) {
+                    throw InvalidArgumentException::dueTriedToUnsetPublicProperty(self::class, $name);
+                }
+
                 throw InvalidArgumentException::dueTriedToUnsetMisconfiguredProperty(self::class, $name);
             }
 
@@ -277,6 +305,10 @@ final class ClassConf
             }
 
             if (false === $propertyConf->isGettable()) {
+                if ($propertyConf->isPublic()) {
+                    throw InvalidArgumentException::dueTriedToGetPublicProperty(self::class, $name);
+                }
+
                 throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(self::class, $name);
             }
 

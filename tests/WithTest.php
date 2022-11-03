@@ -15,6 +15,7 @@ namespace margusk\Accessors\Tests;
 use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Attr\Immutable;
 use margusk\Accessors\Exception\BadMethodCallException;
+use margusk\Accessors\Exception\InvalidArgumentException;
 use margusk\Accessors\Accessible;
 
 class WithTest extends TestCase

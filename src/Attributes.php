@@ -40,23 +40,28 @@ class Attributes
     private array $attributes;
 
     /**
-     * @param  ReflectionClass<object>|ReflectionProperty  $rfObject
+     * @param  ReflectionClass<object>|ReflectionProperty|null  $rfObject
      */
-    public function __construct(ReflectionClass|ReflectionProperty $rfObject)
+    public function __construct(ReflectionClass|ReflectionProperty|null $rfObject)
     {
         $this->attributes = array_fill_keys(self::AVAILABLE_ATTR_NAMES, null);
 
-        // Read attributes from reflection object
-        foreach ($rfObject->getAttributes(
-            Attr::class,
-            ReflectionAttribute::IS_INSTANCEOF
-        ) as $rfAttribute) {
-            $n = $rfAttribute->getName();
+        /* $rfObject can be null to allow "empty" Attributes to be generated */
+        if (null !== $rfObject) {
+            // Read attributes from reflection object
+            foreach (
+                $rfObject->getAttributes(
+                    Attr::class,
+                    ReflectionAttribute::IS_INSTANCEOF
+                ) as $rfAttribute
+            ) {
+                $n = $rfAttribute->getName();
 
-            if (true === array_key_exists($n, $this->attributes)) {
-                /** @var Attr $inst */
-                $inst = $rfAttribute->newInstance();
-                $this->attributes[$n] = $inst;
+                if (true === array_key_exists($n, $this->attributes)) {
+                    /** @var Attr $inst */
+                    $inst = $rfAttribute->newInstance();
+                    $this->attributes[$n] = $inst;
+                }
             }
         }
     }

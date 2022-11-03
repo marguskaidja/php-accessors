@@ -22,20 +22,29 @@ use ReflectionProperty;
 
 class PropertyConf
 {
+    /** @var string */
     private string $name;
 
+    /** @var Attributes */
     private Attributes $attr;
 
     /** @var string|array<int, null|string>|null  */
-    private string|array|null $mutatorCallback;
+    private string|array|null $mutatorCallback = null;
 
-    private bool $isImmutable;
+    /** @var bool */
+    private bool $isImmutable = false;
 
-    private bool $isSettable;
+    /** @var bool */
+    private bool $isSettable = false;
 
-    private bool $isGettable;
+    /** @var bool */
+    private bool $isGettable = false;
 
-    private bool $isUnsettable;
+    /** @var bool */
+    private bool $isUnsettable = false;
+
+    /** @var bool */
+    private bool $isPublic;
 
     /**
      * @param  ReflectionProperty       $rfProperty
@@ -49,58 +58,63 @@ class PropertyConf
     )
     {
         $this->name = $rfProperty->getName();
+        $this->isPublic = $rfProperty->isPublic();
 
-        $this->attr = (new Attributes($rfProperty))
-            ->mergeToParent($classAttr);
+        if (false === $this->isPublic) {
+            $this->attr = (new Attributes($rfProperty))
+                ->mergeToParent($classAttr);
 
-        $this->isImmutable = ($this->attr->get(Immutable::class)?->enabled()) ?? false;
-        $this->isGettable = ($this->attr->get(Get::class)?->enabled()) ?? false;
-        $this->isSettable = ($this->attr->get(Set::class)?->enabled()) ?? false;
-        $this->isUnsettable = ($this->attr->get(Delete::class)?->enabled()) ?? false;
+            $this->isImmutable = ($this->attr->get(Immutable::class)?->enabled()) ?? false;
+            $this->isGettable = ($this->attr->get(Get::class)?->enabled()) ?? false;
+            $this->isSettable = ($this->attr->get(Set::class)?->enabled()) ?? false;
+            $this->isUnsettable = ($this->attr->get(Delete::class)?->enabled()) ?? false;
 
-        /** @var ?Mutator $mutator */
-        $mutator = $this->attr->get(Mutator::class);
-        $mutatorCb = $mutator?->mutator();
+            /** @var ?Mutator $mutator */
+            $mutator = $this->attr->get(Mutator::class);
+            $mutatorCb = $mutator?->mutator();
 
-        if (is_array($mutatorCb) && 2 === count($mutatorCb)) {
-            $mutatorCb = array_map(function (?string $s): ?string {
-                if (null !== $s) {
-                    $s = str_replace('%property%', $this->name, $s);
+            if (is_array($mutatorCb) && 2 === count($mutatorCb)) {
+                $mutatorCb = array_map(function (?string $s): ?string {
+                    if (null !== $s) {
+                        $s = str_replace('%property%', $this->name, $s);
+                    }
+
+                    return $s;
+                }, $mutatorCb);
+
+                $check = $mutatorCb;
+
+                if (null === $mutatorCb[0]) {
+                    $check[0] = $rfProperty->class;
                 }
 
-                return $s;
-            }, $mutatorCb);
-
-            $check = $mutatorCb;
-
-            if (null === $mutatorCb[0]) {
-                $check[0] = $rfProperty->class;
-            }
-
-            /**
-             * Check if instance or class method exists in current class.
-             *
-             * It doesn't check if it's actually callable in object context, thus it may generate
-             * exceptions later when actually beeing invoked.
-             *
-             * @var string[] $check
-             */
-            if (!method_exists($check[0], $check[1])) {
+                /**
+                 * Check if instance or class method exists in current class.
+                 *
+                 * It doesn't check if it's actually callable in object context, thus it may generate
+                 * exceptions later when actually beeing invoked.
+                 *
+                 * @var string[] $check
+                 */
+                if (!method_exists($check[0], $check[1])) {
+                    throw InvalidArgumentException::dueInvalidMutatorCallback(
+                        $rfProperty->class,
+                        $this->name,
+                        $check
+                    );
+                }
+            } else if (null !== $mutatorCb && !is_callable($mutatorCb)) {
                 throw InvalidArgumentException::dueInvalidMutatorCallback(
                     $rfProperty->class,
                     $this->name,
-                    $check
+                    $mutatorCb
                 );
             }
-        } else if (null !== $mutatorCb && !is_callable($mutatorCb)) {
-            throw InvalidArgumentException::dueInvalidMutatorCallback(
-                $rfProperty->class,
-                $this->name,
-                $mutatorCb
-            );
-        }
 
-        $this->mutatorCallback = $mutatorCb;
+            $this->mutatorCallback = $mutatorCb;
+        } else {
+            $this->attr = new Attributes(null);
+        }
     }
 
     public function name(): string
@@ -147,6 +161,11 @@ class PropertyConf
     public function isUnsettable(): bool
     {
         return $this->isUnsettable;
+    }
+
+    public function isPublic(): bool
+    {
+        return $this->isPublic;
     }
 
     public function handlerMethodName(string $accessor): ?string

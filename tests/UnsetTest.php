@@ -173,4 +173,19 @@ class UnsetTest extends TestCase
             $this->assertEquals(false, $obj->issetPropertyValue('p' . $c));
         }
     }
+
+    public function test_unsetting_public_property_must_fail(): void
+    {
+        $obj = new #[Delete] class {
+            use Accessible;
+
+            public string $p1 = 'old value';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|implicit unsetter is not available for public properties|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->unsetP1();
+    }
 }

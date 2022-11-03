@@ -40,6 +40,13 @@ final class InvalidArgumentException extends \InvalidArgumentException
         );
     }
 
+    public static function dueTriedToGetPublicProperty(string $class, string $property): self
+    {
+        return new self(
+            sprintf('implicit getter is not available for public properties like "%s::$%s"', $class, $property)
+        );
+    }
+
     public static function dueTriedToGetMisconfiguredProperty(string $class, string $property): self
     {
         return new self(
@@ -54,6 +61,13 @@ final class InvalidArgumentException extends \InvalidArgumentException
         );
     }
 
+    public static function dueTriedToSetPublicProperty(string $class, string $property): self
+    {
+        return new self(
+            sprintf('implicit setter is not available for public properties like "%s::$%s"', $class, $property)
+        );
+    }
+
     public static function dueTriedToSetMisconfiguredProperty(string $class, string $property): self
     {
         return new self(
@@ -65,6 +79,13 @@ final class InvalidArgumentException extends \InvalidArgumentException
     {
         return new self(
             sprintf('tried to unset unknown property "%s::$%s"', $class, $property)
+        );
+    }
+
+    public static function dueTriedToUnsetPublicProperty(string $class, string $property): self
+    {
+        return new self(
+            sprintf('implicit unsetter is not available for public properties like "%s::$%s"', $class, $property)
         );
     }
 
