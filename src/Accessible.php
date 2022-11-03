@@ -32,9 +32,9 @@ trait Accessible
         $lcaseMethod = strtolower($method);
 
         // Try to extract accessor method from magic method name
-        if (!in_array(($accessorMethod = substr($lcaseMethod, 0, 3)), ['get', 'set'])
+        if (!in_array(($accessorMethod = substr($lcaseMethod, 0, 3)), ['get', 'set'], true)
             && 'with' !== ($accessorMethod = substr($lcaseMethod, 0, 4))
-            && !in_array(($accessorMethod = substr($lcaseMethod, 0, 5)), ['unset', 'isset'])
+            && !in_array(($accessorMethod = substr($lcaseMethod, 0, 5)), ['unset', 'isset'], true)
         ) {
             $accessorMethod = null;
         }
@@ -43,7 +43,7 @@ trait Accessible
         $propertyName = substr($method, strlen((string)$accessorMethod));
         $propertyValue = null;
         $propertiesList = [];
-        $accessorMethodIsSetOrWith = in_array($accessorMethod, ['set', 'with']);
+        $accessorMethodIsSetOrWith = in_array($accessorMethod, ['set', 'with'], true);
 
         // Check if the call is multi-property accessor, that is if first
         // argument is array and accessor method is set at this point and is "set", "with" or "unset"
