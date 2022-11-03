@@ -12,9 +12,9 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
-use margusk\Accessors\Attributes\Get;
-use margusk\Accessors\Exception\InvalidArgumentException;
 use margusk\Accessors\Accessible;
+use margusk\Accessors\Attr\Get;
+use margusk\Accessors\Exception\InvalidArgumentException;
 
 class GetTest extends TestCase
 {
@@ -253,4 +253,35 @@ class GetTest extends TestCase
 
         $this->assertEquals(false, isset($obj->p1));
     }
+
+    public function test_getting_public_property_must_fail(): void
+    {
+        $obj = new #[Get] class {
+            use Accessible;
+
+            public string $p1 = 'value';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|implicit getter is not available for public properties|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->getP1();
+    }
+
+    public function test_testing_public_property_with_isset_must_fail(): void
+    {
+        $obj = new #[Get] class {
+            use Accessible;
+
+            public string $p1 = 'value';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|implicit getter is not available for public properties|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->issetP1();
+    }
+
 }

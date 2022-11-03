@@ -12,16 +12,16 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
-use margusk\Accessors\Attributes\Set;
-use margusk\Accessors\Attributes\Immutable;
-use margusk\Accessors\Exception\BadMethodCallException;
 use margusk\Accessors\Accessible;
+use margusk\Accessors\Attr\Immutable;
+use margusk\Accessors\Attr\Set;
+use margusk\Accessors\Exception\BadMethodCallException;
 
 class WithTest extends TestCase
 {
     public function test_set_method_must_fail(): void
     {
-        $obj = new #[Set,Immutable] class {
+        $obj = new #[Set, Immutable] class {
             use Accessible;
 
             protected string $p1;
@@ -37,7 +37,7 @@ class WithTest extends TestCase
     public function test_direct_assignment_must_fail(): void
     {
         /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
-        $obj = new #[Set,Immutable] class {
+        $obj = new #[Set, Immutable] class {
             use Accessible;
 
             protected string $p1;
@@ -53,7 +53,7 @@ class WithTest extends TestCase
     public function test_original_object_must_not_be_modified(): void
     {
         $oldValue = 'old value';
-        $obj = new #[Set,Immutable] class($oldValue) {
+        $obj = new #[Set, Immutable] class($oldValue) {
             use Accessible;
 
             public function __construct(
@@ -77,7 +77,7 @@ class WithTest extends TestCase
     {
         $oldValue = 'old value';
 
-        $obj1 = new #[Set,Immutable] class($oldValue) {
+        $obj1 = new #[Set, Immutable] class($oldValue) {
             use Accessible;
 
             public function __construct(
@@ -88,7 +88,7 @@ class WithTest extends TestCase
             public function equals(self $other): bool
             {
                 /** @noinspection PhpStrictComparisonWithOperandsOfDifferentTypesInspection */
-                return  $this === $other;
+                return $this === $other;
             }
 
             public function getP1Value(): string
@@ -109,7 +109,7 @@ class WithTest extends TestCase
 
     public function test_updating_multiple_values_should_work(): void
     {
-        $obj1 = new #[Set,Immutable] class {
+        $obj1 = new #[Set, Immutable] class {
             use Accessible;
 
             protected string $p0 = 'empty0';
@@ -120,7 +120,7 @@ class WithTest extends TestCase
             public function equals(self $other): bool
             {
                 /** @noinspection PhpStrictComparisonWithOperandsOfDifferentTypesInspection */
-                return  $this === $other;
+                return $this === $other;
             }
 
             public function getPropertyValue(string $propertyName): string
@@ -130,7 +130,10 @@ class WithTest extends TestCase
         };
 
         $values = [
-            'value0', 'value1', 'value2', 'value3'
+            'value0',
+            'value1',
+            'value2',
+            'value3'
         ];
 
         /** @phpstan-ignore-next-line */
@@ -151,7 +154,7 @@ class WithTest extends TestCase
 
     public function test_honour_existing_wither_method(): void
     {
-        $obj = new #[Set,Immutable] class {
+        $obj = new #[Set, Immutable] class {
             const EXPECTED_VALUE = 'existing method called';
 
             use Accessible;

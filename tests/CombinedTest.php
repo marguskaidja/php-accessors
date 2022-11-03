@@ -12,9 +12,9 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
-use margusk\Accessors\Attributes\{ICase as CI, Get, Set};
-use margusk\Accessors\Exception\InvalidArgumentException;
 use margusk\Accessors\Accessible;
+use margusk\Accessors\Attr\{Get, ICase as CI, Set};
+use margusk\Accessors\Exception\InvalidArgumentException;
 
 class CombinedTest extends TestCase
 {
@@ -115,7 +115,7 @@ class CombinedTest extends TestCase
 
     public function test_named_arguments_to_accessor_method_are_handled(): void
     {
-        $obj = new #[Get,Set] class {
+        $obj = new #[Get, Set] class {
             use Accessible;
 
             protected string $a = 'some value';

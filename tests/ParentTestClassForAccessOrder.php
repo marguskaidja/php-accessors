@@ -12,9 +12,9 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
-use margusk\Accessors\Attributes\Get;
-use margusk\Accessors\Attributes\Set;
 use margusk\Accessors\Accessible;
+use margusk\Accessors\Attr\Get;
+use margusk\Accessors\Attr\Set;
 
 /**
  * @property string $parentProperty

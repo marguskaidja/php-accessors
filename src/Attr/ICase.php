@@ -10,12 +10,17 @@
 
 declare(strict_types=1);
 
-namespace margusk\Accessors\Attributes;
+namespace margusk\Accessors\Attr;
 
 use Attribute;
+use margusk\Accessors\Attr;
 
-#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
-class Immutable extends Base
+#[Attribute(Attribute::TARGET_CLASS)]
+class ICase extends Attr
 {
-
+    public function __construct()
+    {
+        /** @noinspection PhpRedundantOptionalArgumentInspection */
+        parent::__construct(true);
+    }
 }

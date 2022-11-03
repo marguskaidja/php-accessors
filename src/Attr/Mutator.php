@@ -10,45 +10,49 @@
 
 declare(strict_types=1);
 
-namespace margusk\Accessors\Attributes;
+namespace margusk\Accessors\Attr;
 
 use Attribute;
+use margusk\Accessors\Attr;
 
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
-class Set extends Base
+class Mutator extends Attr
 {
-    /** @var null|string[] */
-    protected ?array $mutator;
+    /** @var string|string[]|null */
+    private string|array|null $mutator;
 
     /**
-     * @param  bool|null            $enabled
-     * @param  string|string[]|null $mutator
+     * @param  string|string[]|null  $mutator
      */
-    public function __construct(?bool $enabled = true, string|array $mutator = null)
-    {
-        parent::__construct($enabled);
-
+    public function __construct(
+        string|array|null $mutator
+    ) {
         if (is_string($mutator)) {
             if (preg_match('/^\$this->(.+)/', trim($mutator), $matches)) {
-                $mutator = ['$this', $matches[1]];
+                $mutator = [null, $matches[1]];
             } else {
-                $mutator = preg_split('/::/', $mutator, 2, PREG_SPLIT_NO_EMPTY);
+                $mutator = explode('::', $mutator, 2);
+
+                if (1 === count($mutator)) {
+                    $mutator = $mutator[0];
+                }
             }
         }
 
-        // Force the mutator array to indexed list
+        // Force the mutator array into indexed list
         if (is_array($mutator)) {
             $mutator = array_values($mutator);
         }
 
-        /** @var string[] $mutator */
         $this->mutator = $mutator;
+
+        parent::__construct(null !== $this->mutator);
     }
 
     /**
-     * @return string[]|null
+     * @return string|string[]|null
      */
-    public function mutator(): array|null
+    public function mutator(): string|array|null
     {
         return $this->mutator;
     }

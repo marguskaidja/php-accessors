@@ -12,11 +12,11 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
-use margusk\Accessors\Attributes\Delete;
-use margusk\Accessors\Attributes\Get;
-use margusk\Accessors\Attributes\Immutable;
-use margusk\Accessors\Exception\InvalidArgumentException;
 use margusk\Accessors\Accessible;
+use margusk\Accessors\Attr\Delete;
+use margusk\Accessors\Attr\Get;
+use margusk\Accessors\Attr\Immutable;
+use margusk\Accessors\Exception\InvalidArgumentException;
 
 class UnsetTest extends TestCase
 {
@@ -119,7 +119,7 @@ class UnsetTest extends TestCase
 
     public function test_unsetting_immutable_property_using_native_unset_must_fail(): void
     {
-        $obj = new #[Delete,Immutable] class {
+        $obj = new #[Delete, Immutable] class {
             use Accessible;
 
             protected string $p1 = 'initial value';
@@ -133,7 +133,7 @@ class UnsetTest extends TestCase
 
     public function test_unsetting_immutable_property_using_magic_call_must_fail(): void
     {
-        $obj = new #[Delete,Immutable] class {
+        $obj = new #[Delete, Immutable] class {
             use Accessible;
 
             protected string $p1 = 'initial value';
@@ -163,14 +163,29 @@ class UnsetTest extends TestCase
         };
 
         for ($c = 0; $c <= 3; $c++) {
-            $this->assertEquals(true, $obj->issetPropertyValue('p' . $c));
+            $this->assertEquals(true, $obj->issetPropertyValue('p'.$c));
         }
 
         /** @phpstan-ignore-next-line */
         $obj->unset(['p0', 'p1', 'p2', 'p3']);
 
         for ($c = 0; $c <= 3; $c++) {
-            $this->assertEquals(false, $obj->issetPropertyValue('p' . $c));
+            $this->assertEquals(false, $obj->issetPropertyValue('p'.$c));
         }
+    }
+
+    public function test_unsetting_public_property_must_fail(): void
+    {
+        $obj = new #[Delete] class {
+            use Accessible;
+
+            public string $p1 = 'old value';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|implicit unsetter is not available for public properties|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->unsetP1();
     }
 }
