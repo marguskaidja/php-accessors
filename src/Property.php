@@ -12,7 +12,6 @@ declare(strict_types=1);
 
 namespace margusk\Accessors;
 
-use margusk\Accessors\Attributes;
 use margusk\Accessors\Attr\Delete;
 use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Attr\Immutable;
@@ -21,7 +20,7 @@ use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
 use ReflectionProperty;
 
-class PropertyConf
+class Property
 {
     /** @var string */
     private string $name;

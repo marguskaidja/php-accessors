@@ -45,10 +45,10 @@ final class ClassConf
     /** @var ReflectionClass<object> */
     private ReflectionClass $rfClass;
 
-    /** @var PropertyConf[] */
+    /** @var Property[] */
     private array $properties = [];
 
-    /** @var PropertyConf[] */
+    /** @var Property[] */
     private array $propertiesByLcase = [];
 
     /** @var Closure */
@@ -132,7 +132,7 @@ final class ClassConf
 
             $attributes = $docBlockAttributes[$name] ?? $this->attributes;
 
-            $this->properties[$name] = new PropertyConf(
+            $this->properties[$name] = new Property(
                 $rfProperty,
                 $attributes,
                 ($handlerMethodNames[$nameLowerCase] ?? [])
@@ -149,7 +149,7 @@ final class ClassConf
 
     private function createGetter(): Closure
     {
-        return (function (object $object, string $name, ?PropertyConf $propertyConf): mixed {
+        return (function (object $object, string $name, ?Property $propertyConf): mixed {
             if (null === $propertyConf) {
                 throw InvalidArgumentException::dueTriedToGetUnknownProperty(self::class, $name);
             }
@@ -179,7 +179,7 @@ final class ClassConf
             string $accessorMethod,
             string $name,
             mixed $value,
-            ?PropertyConf $propertyConf
+            ?Property $propertyConf
         ): object {
             if (null === $propertyConf) {
                 throw InvalidArgumentException::dueTriedToSetUnknownProperty(self::class, $name);
@@ -218,7 +218,7 @@ final class ClassConf
 
     private function createIssetter(): Closure
     {
-        return (function (object $object, string $name, ?PropertyConf $propertyConf): bool {
+        return (function (object $object, string $name, ?Property $propertyConf): bool {
             if (null === $propertyConf) {
                 throw InvalidArgumentException::dueTriedToGetUnknownProperty(self::class, $name);
             }
@@ -243,7 +243,7 @@ final class ClassConf
 
     private function createUnsetter(): Closure
     {
-        return (function (object $object, string $name, ?PropertyConf $propertyConf): object {
+        return (function (object $object, string $name, ?Property $propertyConf): object {
             if (null === $propertyConf) {
                 throw InvalidArgumentException::dueTriedToUnsetUnknownProperty(self::class, $name);
             }
@@ -294,7 +294,7 @@ final class ClassConf
         return self::$classes[$name];
     }
 
-    public function findPropertyConf(string $name, bool $forceCaseInsensitive = false): ?PropertyConf
+    public function findPropertyConf(string $name, bool $forceCaseInsensitive = false): ?Property
     {
         if ($forceCaseInsensitive) {
             $caseInsensitive = true;
