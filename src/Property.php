@@ -55,12 +55,12 @@ class Property
     /**
      * @param  ReflectionProperty     $rfProperty
      * @param  Attributes             $classAttr
-     * @param  array<string, string>  $handlerMethodNames
+     * @param  array<string, string>  $accessorEndpoints
      */
     public function __construct(
         ReflectionProperty $rfProperty,
         Attributes $classAttr,
-        private array $handlerMethodNames
+        private array $accessorEndpoints
     ) {
         $this->name = $rfProperty->getName();
         $this->isPublic = $rfProperty->isPublic();
@@ -176,8 +176,8 @@ class Property
         return $this->isUnsettable;
     }
 
-    public function handlerMethodName(string $accessor): ?string
+    public function accessorEndpoint(string $accessor): ?string
     {
-        return $this->handlerMethodNames[$accessor] ?? null;
+        return $this->accessorEndpoints[$accessor] ?? null;
     }
 }

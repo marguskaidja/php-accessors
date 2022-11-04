@@ -91,12 +91,11 @@ final class ClassConf
         $docBlockAttributes = $this->parseDocBlock($this->rfClass);
 
         /**
-         * Collect all manually generated set/get etc. methods which will handle the accessor
-         * functionality for separate properties
+         * Collect all manual accessor endpoints.
          *
-         * @var array<string, array<string, string>> $handlerMethodNames
+         * @var array<string, array<string, string>> $accessorEndpoints
          */
-        $handlerMethodNames = [];
+        $accessorEndpoints = [];
 
         foreach (
             $this->rfClass->getMethods(
@@ -110,7 +109,7 @@ final class ClassConf
                     $matches
                 )
             ) {
-                $handlerMethodNames[(string)$matches[2]][(string)$matches[1]] = $rfMethod->name;
+                $accessorEndpoints[(string)$matches[2]][(string)$matches[1]] = $rfMethod->name;
             }
         }
 
@@ -134,7 +133,7 @@ final class ClassConf
             $this->properties[$name] = new Property(
                 $rfProperty,
                 ($docBlockAttributes[$name] ?? $this->attributes),
-                ($handlerMethodNames[$nameLowerCase] ?? [])
+                ($accessorEndpoints[$nameLowerCase] ?? [])
             );
 
             $this->propertiesByLcase[$nameLowerCase] = $this->properties[$name];
@@ -161,10 +160,10 @@ final class ClassConf
                 throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(self::class, $name);
             }
 
-            $handler = $propertyConf->handlerMethodName('get');
+            $endpoint = $propertyConf->accessorEndpoint('get');
 
-            if (null !== $handler) {
-                return $object->{$handler}();
+            if (null !== $endpoint) {
+                return $object->{$endpoint}();
             }
 
             return $object->{$propertyConf->name()};
@@ -192,10 +191,10 @@ final class ClassConf
                 throw InvalidArgumentException::dueTriedToSetMisconfiguredProperty(self::class, $name);
             }
 
-            $handler = $propertyConf->handlerMethodName($accessorMethod);
+            $endpoint = $propertyConf->accessorEndpoint($accessorMethod);
 
-            if (null !== $handler) {
-                $result = $object->{$handler}($value);
+            if (null !== $endpoint) {
+                $result = $object->{$endpoint}($value);
 
                 if ('with' === $accessorMethod && ($result instanceof (self::class))
                 ) {
@@ -230,10 +229,10 @@ final class ClassConf
                 throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(self::class, $name);
             }
 
-            $handler = $propertyConf->handlerMethodName('isset');
+            $endpoint = $propertyConf->accessorEndpoint('isset');
 
-            if (null !== $handler) {
-                return (bool)$object->{$handler}();
+            if (null !== $endpoint) {
+                return (bool)$object->{$endpoint}();
             }
 
             return isset($object->{$propertyConf->name()});
@@ -262,10 +261,10 @@ final class ClassConf
                 );
             }
 
-            $handler = $propertyConf->handlerMethodName('unset');
+            $endpoint = $propertyConf->accessorEndpoint('unset');
 
-            if (null !== $handler) {
-                $object->{$handler}();
+            if (null !== $endpoint) {
+                $object->{$endpoint}();
             } else {
                 unset($object->{$propertyConf->name()});
             }
