@@ -1,25 +1,28 @@
 [![Tests](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml/badge.svg)](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml)
 # Accessors
 
-Current library can create automatic accessors for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class.
+Current library can create automatic accessors (e.g. _getters_ and _setters_) for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class which will **handle** situations where attempt is made to access _inaccessible_ (`private`/`protected`) property.
 
-Then, in case an `private`/`protected` (_inaccessible for outside_) property is beeing accessed, property overloader will kick in and depending of configuration access is beeing granted or denied.
+Although it tries to stay as invisible as possible, the base concept is that the access for exposing properties to outside world must be configured explicitly. This can make it a bit more verbose from the solutions where accessors are created implicitly just based on existence/non-existence of some accessor method with specific name.
 
 #### Features
-* Multiple accessor syntaxes to choose from:
-  * direct assignment syntax:
-    * `$value = $foo->property`
-    * `$foo->property = 'value'`
-  * method syntax:
-    * `$value = $foo->get('property')`
-    * `$foo->setProperty('value')`
-    * `$foo->set('property1', 'value1')`
-    * `$foo->set(['property1' => 'value1', 'property2' => 'value2'])`
-* Easy configuration, implemented using [Attributes](https://www.php.net/manual/en/language.attributes.overview.php): 
-  * No custom initialization code has to be called to make things work.
-  * Access can be configured one-by-one per property or for all properties at once.
-  * Inheritance and override support.
-  * Classes nor global namespace will never be polluted with potentially conflicting data other than only implementations of `__get()`/`__set()`/`__isset()`/`__unset()`/`__call()`
+* Multiple accessor syntaxes:
+    * direct assignment:
+        * `$value = $foo->property`
+        * `$foo->property = 'value'`
+    * method:
+        * `$value = $foo->get('property')`
+        * `$value = $foo->property()`
+        * `$foo->property('value')`
+        * `$foo->setProperty('value')`
+        * `$foo->set('property1', 'value1')`
+        * `$foo->set(['property1' => 'value1', 'property2' => 'value2', ..., 'propertyN' => 'valueN'])`
+* Straightworward and easy configuration using [Attributes](https://www.php.net/manual/en/language.attributes.overview.php) (or _DocBlocks_):
+    * No custom initialization code has to be called from class constructors to make things work.
+    * Accessors can be configured _per_ property or for all class at once.
+    * Inheritance and override support. E.g. set default behaviour for whole class and make exceptions based on specific properties.
+    * No variables, functions or methods (except `__get()`/`__set()`/`__isset()`/`__unset()`/`__call()`) will be polluted into user classes or global namespace.
+    * For basic usage [_DocBlock_ tags](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) `@property`, `@property-read` and `@property-write` can be used instead of Attributes.
 * _Weak_ immutability support backed by _wither_ methods.
 * Mutator support for _setters_.
 
@@ -41,32 +44,32 @@ Consider following class with manually generated accessor methods:
 ```php
 class A
 {
-    protected string $prop1 = "value1";
+    protected string $foo = "foo";
 
-    protected string $prop2 = "value2";
+    protected string $bar = "bar";
 
-    protected string $prop3 = "value3";
+    protected string $baz = "baz";
 
-    public function getProp1(): string
+    public function getFoo(): string
     {
-        return $this->prop1;
+        return $this->foo;
     }
 
-    public function getProp2(): string
+    public function getBar(): string
     {
-        return $this->prop2;
+        return $this->bar;
     }
 
-    public function getProp3(): string
+    public function getBaz(): string
     {
-        return $this->prop2;
+        return $this->baz;
     }
 }
 
 $a = new A();
-echo $a->getProp1() . "\n";  // Outputs "value1"
-echo $a->getProp2() . "\n";  // Outputs "value2"
-echo $a->getProp3() . "\n";  // Outputs "value3"
+echo $a->getFoo() . "\n";  // Outputs "foo"
+echo $a->getBar() . "\n";  // Outputs "bar"
+echo $a->getBaz() . "\n";  // Outputs "baz"
 ```
 This has boilerplate code just to make 3 properties readable. In case there are tens of properties things could get quite tedious.
 
@@ -81,31 +84,29 @@ class A
     use Accessible;
 
     #[Get]
-    protected string $prop1 = "value1";
+    protected string $foo = "foo";
 
     #[Get]
-    protected string $prop2 = "value2";
+    protected string $bar = "bar";
 
     #[Get]
-    protected string $prop3 = "value3";
+    protected string $baz = "baz";
 }
 
 $a = new A();
-echo $a->getProp1() . "\n";  // Outputs "value1"
-echo $a->getProp2() . "\n";  // Outputs "value2"
-echo $a->getProp3() . "\n";  // Outputs "value3"
+echo $a->getFoo() . "\n";  // Outputs "foo"
+echo $a->getBar() . "\n";  // Outputs "bar"
+echo $a->getBaz() . "\n";  // Outputs "baz"
 ```
 
 Using `Accessible` trait gives you automatically access to _direct assignment_ syntax, which wasn't even possible previously with manually crafted methods:
 ```php
-/.../
-
-echo $a->prop1 . "\n";  // Outputs "value1"
-echo $a->prop2 . "\n";  // Outputs "value2"
-echo $a->prop3 . "\n";  // Outputs "value3"
+echo $a->foo . "\n";  // Outputs "foo"
+echo $a->bar . "\n";  // Outputs "bar"
+echo $a->baz . "\n";  // Outputs "baz"
 ```
 
-### More examples
+### Further examples
 If there's  lot's of properties to expose, then it's not reasonable to mark each one of them separately. Mark all properties at once in the class declaration:
 
 ```php
@@ -117,14 +118,14 @@ class A
 {
     use Accessible;
 
-    protected string $prop1 = "value1";
+    protected string $foo = "foo";
 
-    protected string $prop2 = "value2";
+    protected string $bar = "bar";
 
-    protected string $prop3 = "value3";
+    protected string $baz = "baz";
 }
 ```
-Make all properties readable except `$prop2`:
+Make all properties readable except `$bar`:
 
 ```php
 use margusk\Accessors\Attr\Get;
@@ -135,16 +136,16 @@ class A
 {
     use Accessible;
 
-    protected string $prop1 = "value1";
+    protected string $foo = "foo";
 
     #[Get(false)]
-    protected string $prop2 = "value2";
+    protected string $bar = "bar";
 
-    protected string $prop3 = "value3";
+    protected string $baz = "baz";
 }
 
-echo (new A())->getProp1();  // Outputs "value1"
-echo (new A())->getProp2();  // Results in Exception
+echo (new A())->getFoo();   // Outputs "foo"
+echo (new A())->getBar();   // Results in Exception
 ```
 What about writing to properties? Yes, just add `#[Set]` attribute:
 
@@ -159,30 +160,44 @@ class A
 {
     use Accessible;
 
-    protected string $prop1 = "value1";
+    protected string $foo = "foo";
 
     #[Get(false),Set(false)]
-    protected string $prop2 = "value2";
-
-    protected string $prop3 = "value3";
+    protected string $bar = "bar";
 }
 
 $a = new A();
-
-echo $a->setProp1("new value1")->getProp1();    // Outputs "new value1"
-
-$a->setProp2("new value2");                     // Results in Exception
+echo $a->setFoo("new foo")->getFoo();  // Outputs "new foo"
+$a->setBar("new bar");                 // Results in Exception
 ```
 
-**Note:** If `#[Set]` is enabled on property then it should be usually combined with _mutator_ and/or made _immutable_. Although it's technically okay to allow to just modify a property without any other intervention (like in example above), it wouldn't make much sense. If just numb write access is desired, then perhaps using just `public` visibility on property should be considered, because it skips all the overhead caused by current library.
+But what about DocBlock tags? Yes! Same class from above, but configured with _DocBlock_:
+```php
+use margusk\Accessors\Accessible;
+
+/**
+ * @property        string $foo 
+ * @property-read   string $bar
+ */
+class A
+{
+    use Accessible;
+
+    protected string $foo = "foo";
+
+    protected string $bar = "bar";
+}
+
+$a = new A();
+echo $a->setFoo("new foo")->getFoo();   // Outputs "new foo"
+$a->setBar("new bar");                  // Results in Exception
+```
 
 ### Immutable properties
 
-Objects which allow their contents to be changed are named as **mutable**. And in contrast the ones who don't are [**immutable**](https://en.wikipedia.org/wiki/Immutable_object).
+Objects which allow their contents to be changed are named as **mutable**. And vice versa, the ones who don't are [**immutable**](https://en.wikipedia.org/wiki/Immutable_object).
 
-When talking about immutability, then it usually means combination of restricting the changes inside the original object, but allowing to make a copy of the object with desired changes.
-
-This way original object stays intact and cloned object with changes can be used for new operations. 
+When talking about immutability, then it usually means combination of restricting the changes inside the original object, but providing functionality to copy/clone object with desired changes.  This way original object stays intact and cloned object with changes can be used for new operations.
 
 Consider following situation:
 
@@ -263,7 +278,7 @@ echo $b->f; // Outputs "7"
 ```
 
 Notes:
-* Immutability is implemented _weakly_, not to be confused with [strong immutability](https://en.wikipedia.org/wiki/Immutable_object#Weak_vs_strong_immutability). E.g.:
+* Immutability here is _weak_ and should not to be confused with [strong immutability](https://en.wikipedia.org/wiki/Immutable_object#Weak_vs_strong_immutability):
     * There's no rule how much of the object should be made immutable. It can be only one property or whole object (all properties) if wanted.
     * Nested immutability is not enforced, thus property can contain another mutable object.
     * Immutable properties can be still changed inside the owner object.
@@ -286,28 +301,28 @@ class A
     use Accessible;
 
     #[Set,Mutator("htmlspecialchars")]
-    protected string $prop1;
-
-    protected string $prop2;
+    protected string $foo;
 }
 
-echo (new A())->setProp1('<>')->getProp1();  // Outputs "&lt;&gt;"
+echo (new A())->setFoo('<>')->getFoo();  // Outputs "&lt;&gt;"
 ```
 
 It can validate and/or tweak the value before beeing assigned to property.
 
 _Mutator_ parameter must be string or array representing a PHP `callable`. When string is passed then it must have one of following syntaxes:
-1. `<function>`  
-1. `<class>::<method>` 
+1. `<function>`
+1. `<class>::<method>`
 1. `$this-><method>` (`$this` is replaced during runtime with the object instance where the accessor belongs)
 
 It may contain special variable named `%property%` which is replaced with the property name it applies. This is useful only when specifying mutator globally in class attribute.
 
 The callable function/method must accept assignable value as first parameter and must return a value to be assigned to property.
 
+Note that mutator has very simple use cases. If more complex handling is needed then accessor endpoint handlers should be used (described later).  
+
 ### Unsetting property
 
-It's possible to unset property's value by using attribute `#[Delete]`:
+It's possible to allow unsetting properties by using attribute `#[Delete]`:
 
 ```php
 use margusk\Accessors\Attr\{
@@ -321,20 +336,24 @@ class A
     use Accessible;
 
     #[Delete]
-    protected string $prop1;
+    protected string $foo;
 
-    protected string $prop2;
+    protected string $bar;
 }
 
-(new A())->unsetProp1();
+$a = new A();
+$a->unsetFoo();     // Ok.
+unset($a->foo);     // Ok.
+unset($a->bar);     // Results in Exception
 ```
 
 Notes: `Delete` is used as attribute name instead `Unset` because `Unset` is reserved word.
 
-### Manually created accessor methods as handlers
+### Accessor endpoints
 
-If an existing accessor method is encountered, then it's interpreted as the final handler for specific accessor. 
+If accessor logic should contain more than just straightforward "setting the property value" or "getting the property value", then manual endpoint methods can be created and the library uses them automatically.
 
+Consider following example:
 ```php
 use margusk\Accessors\Attr\{
     Get, Set
@@ -346,36 +365,43 @@ class A
 {
     use Accessible;
 
-    public bool $prop1Set = false;
+    protected int $foo = 0;
 
-    protected int $prop1;
-
-    public function setProp1($prop1)
+    protected function getFoo(): int
     {
-        $this->prop1 = $prop1 & 0xFF;
-        $this->prop1Set = true;
+        return $this->foo + 1;
+    }
+
+    protected function setFoo(int $value): void
+    {
+        $this->foo = $value & 0xFF;
     }
 }
 
-$obj = new A();
-$obj->prop1 = 1023;
-echo $obj->prop1; // Outputs "255"
-var_dump($opj->prop1Set); // Outputs "bool(true)"
+$a = new A();
+$a->foo = 1023;
+echo $a->foo;         // Outputs "256" instead of "1023"
+echo $a->getFoo();    // Outputs "256" instead of "1023"
 ```
 
+The 2 endpoint handlers above (`getFoo`/`setFoo`) will be called in all situations:
+* when property is accessed with direct syntax (e.g. `$a->foo`)
+* when property is accessed using method syntax (e.g. `$a->getFoo()`)
+    * If the visibility of endpoint is public, then it's called by PHP engine.
+    * If visibility is hidden, then it goes through `__call` magic method provided by `Accessible` trait.
+
 Notes:
-* To be able to use existing method, it must start with `set`, `get`, `isset`, `unset` or `with` prefix and follow with property name.
+* To be able to create endpoint handler, it must start with `set`, `get`, `isset`, `unset` or `with` prefix and follow with property name.
 * It must be non-static.
-* All visibility levels work but with minor difference in that `public` handlers are called natively by the engine. `private` and `protected` can't be called outside, thus they are passed through `__call` provided by `Accessible` trait.
-* In case existing `set` method is used, the _mutator_ method is not called. Mutating should be done inside handler.
-* Return values:
-  * from `get` and `isset` handlers are handed over to caller.
-  * from `set` and `unset` handler are discarded and current object instance is always returned. 
-  * from `with` handler is handed over to original caller only if the result is `object` and is derived from current class. Other values are discarded and original caller gets `clone`-d object instance.
+* _mutator_ method is not called. Mutating should be done inside handler.
+* Return values from:
+    * `get` and `isset` endpoints are handed over to caller.
+    * `set` and `unset` endpoints are discarded and current object instance is always returned.
+    * `with` endpoint are handed over to caller **only if** value is `object` and derived from current class. Other values are discarded and original caller gets `clone`-d object instance.
 
-### Class inheritance
+### Configuration inheritance
 
-Attribute inheritance works intuitively. Attributes in parent class declaration are inherited by children and can be overwritten (except `ICase` and `Immutable`):
+Inheritance is straightforward. Configuration in parent class is inherited by children and can be overwritten (except for `ICase` and `Immutable`):
 
 ```php
 use margusk\Accessors\Attr\{
@@ -391,17 +417,16 @@ class A
 
 class B extends A
 {
-    protected string $prop1;
-    
+    protected string $foo;
+
     #[Set(false)]
-    protected string $prop2;
+    protected string $bar;
 }
 
-$obj = new B();
-$obj->prop1 = 'value';
-echo $obj->prop1; // Outputs "value"
-
-$obj->prop2 = 'value'; // Throws BadMethodCallException
+$b = new B();
+$b->foo = 'new foo';
+echo $b->foo;           // Outputs "new foo"
+$b->bar = 'new bar';    // Throws BadMethodCallException
 ```
 
 ### Case sensitivity in property names
@@ -420,22 +445,24 @@ class A
 {
     use Accessible;
 
-    protected string $prop1;
-    protected string $PROP1;
+    protected string $foo = 'foo';
+    protected string $FOO = 'FOO';
 }
 
-$obj = new A();
-$obj->setProp1('value');        // Case insensitive => A::$PROP1 is modified
-$obj->prop1('value');           // Case insensitive => A::$PROP1 is modified
+$a = new A();
+$a->setFoo('value');        // Case insensitive => A::$FOO is modified
+$a->foo('value');           // Case insensitive => A::$FOO is modified
+$a->Foo('value');           // Case insensitive => A::$FOO is modified
 ```
 2. In all other situations, the property names are treated case-sensitive by default.
 
 ```php
-$obj->set('prop1', 'value');    // Case sensitive => A::$prop1 is modified
-echo $obj->prop1;               // Case sensitive => A::$prop1 is returned
-echo $obj->Prop1;               // Throws InvalidArgumentException 
+$a->set('foo', 'value');    // Case sensitive => A::$foo is modified
+echo $a->foo;               // Outputs "foo"
+echo $a->FOO;               // Outputs "FOO"
+echo $a->Foo;               // Results in Exception because property "Foo" doesn't exist
 ```
-  
+
 Case-insensitivity for all situations can be turned on by adding `ICase` attribute to class declaration. Attribute must be added to whole class (thus not to properties) and can't be reverted in child classes to prevent ambiguouty in the class hierarchy.
 
 ```php
@@ -449,96 +476,94 @@ class A
 {
     use Accessible;
 
-    protected string $prop1;
-    protected string $PROP1;
+    protected string $foo = "foo";
+    protected string $FOO = "FOO";
 }
 
-$obj = new A();
-$obj->Prop1 = 'value';   // Case insensitive => A::$PROP1 is modified
-echo $obj->Prop1;        // Case insensitive => A::$PROP1 is returned 
+$a = new A();
+$a->Foo = 'value';      // Outputs "FOO"
+echo $a->foo;           // Outputs "FOO"
 ```   
 However the recommended way is leave the case-sensitivity on and always access the property by the name it's declared in the class to have the same consistent code throughout whole codebase.
 
-
 ### IDE autocompletion
 
-Using magic methods brings the disadvantages of losing IDE autocompletion and make static code analyzers grope in the dark.
+Having accessors with _magic methods_ can bring the disadvantages of losing somewhat of IDE autocompletion and make static code analyzers grope in the dark.
 
 To inform static code parsers about available magic methods and properties, PHPDoc [@method](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/method.html) and/or [@property](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) tags can be specified in front of the class:
 
 ```php
-use margusk\Accessors\Attr\{
-    Get, Set
-};
 use margusk\Accessors\Accessible;
 
 /**
- * @property        $prop1
- * @property-read   $prop2
+ * @property        string $foo
+ * @property-read   string $bar
  * 
- * @method string   getProp1()
- * @method self     setProp1(string $value)
- * @method string   getProp2()
+ * @method string   getFoo()
+ * @method self     setFoo(string $value)
+ * @method string   getBar()
  */
-#[Get,Set]
 class A
 {
     use Accessible;
 
-    protected string $prop1 = "value1";
+    protected string $foo = "foo";
     
-    #[Set(false)]
-    protected string $prop2 = "value1";
+    protected string $bar = "bar";
 }
+$a = new A();
+echo $a->setFoo('foo is updated')->foo; // Outputs "foo is updated"
+echo $a->bar; // Outputs "bar"
 ```   
+Since the basic configuration will be read from `@property[<-read>|<-write>]` tags, there's no more configuration needed.
+So in addition of having magic properties documented, the properties `$foo` and `$bar` are also automatically exposed.
 
+## API
 
-## Full API
+### Configuration aka exposing properties
 
-### Exposing properties
-
-1. Use `margusk\Accessors\Accessible` inside the class which properties you want to expose
-1. Add attribute `#[Get]`, `#[Set]` and/or `#[Delete]` before the declaration of the property you want to expose. Alternatively if you want to expose all class properties at once, add the attribute before class declaration:
-   * `margusk\Accessors\Attributes\Get(bool $enabled = true)`: allow or disable to read and use `isset()` on the property.
-   * `margusk\Accessors\Attributes\Set(bool $enabled = true)`: allow or disable to update the property. Second argument denotes optional _Mutator_ method through which the value is passed through before assigning to property.
-   * `margusk\Accessors\Attributes\Delete(bool $enabled = true)`: allow or disable to `unset()` the property.
-1. Attribute `#[Mutator]`:
-    * `margusk\Accessors\Attributes\Mutator(string|array|null $callback)`: the parameter works almost like `callable` but with a tweak in `string` type:
+1. Use `margusk\Accessors\Accessible` trait inside the class which properties you want to expose.
+2. Configure with following attributes:
+   *  Use `#[Get]`, `#[Set]` and/or `#[Delete]` (from namespace `margusk\Accessors\Attr`) before the declaration of the property or whole you want to expose:
+       * All take optional single `bool` parameter which can be set to `false` to deny specific accessor for the property or whole class. This is useful in situtations where override from previous setting is needed.
+       * `#[Get(bool $enabled = true)]`: allow or disable read access to property. Works in conjunction with allowing/denying `isset` on property.
+       * `#[Set(bool $enabled = true)]`: allow or disable to write access the property.
+       * `#[Delete(bool $enabled = true)]`: allow or disable `unset()` of the property.
+   * `#[Mutator(string|array|null $callback)]`:
+       * the `$callback` parameter works almost like `callable` but with a tweak in `string` type:
        * if `string` type is used then it must contain regular function name or syntax `$this->someMutatorMethod` implies instance method.
        * use `array` type for specifying static class method.
        * and use `null` to discard any previously set mutator.
-1. Attribute `#[ICase]`:
-   * `margusk\Accessors\Attributes\ICase()`: make accessing the property names case-insensitive. This can be added only to class declaration and can't be reverted later.
-1. Attribute `#[Immutable]`:
-   * `margusk\Accessors\Attributes\Immutable()`: turn on immutable flag for single property or whole class. Once the flag is added, it can't be reverted later.
+   * `#[ICase]`: makes accessing the property names case-insensitive. Can be added only to class declaration and can't be disabled later.
+   * `#[Immutable]`: turns an property or whole class immutable. Once the attribute is added, it can't be disabled later.
 
-### Properties can be accessed as following
+### Properties can be accessed with following syntaxes:
 
-To read the value of property `$prop1`:
-* `echo $obj->prop1;`
-* `echo $obj->getProp1();`
-* `echo $obj->get('prop1);`
-* `echo $obj->prop1();`
+Reading properties:
+* `$obj->foo`
+* `$obj->getFoo()`
+* `$obj->get('foo)`
+* `$obj->foo()`
 
-To update the value of property `$prop1`:
-* `$obj->prop1 = 'some value';`
-* `$obj->setProp1('some value');`
-* `$obj->set('prop1', 'some value');`
-* `$obj->set(['prop1' => 'value1', 'prop2' => 'value2', ..., 'propN' => 'valueN');`
-* `$obj->prop1('some value');`
+Updating mutable properties:
+* `$a->foo = 'new foo';`
+* `$a->setFoo('new foo');`
+* `$a->set('foo', 'new foo');`
+* `$a->set(['foo' => 'new foo', 'bar' => 'new bar', ..., 'baz' => 'new baz');`
+* `$a->foo('some value');`
 
-To update the value of immutable property `$prop1`:
-* `$cloned = $obj->withProp1('some value');`
-* `$cloned = $obj->with('prop1', 'some value');`
-* `$cloned = $obj->with(['prop1' => 'value1', 'prop2' => 'value2', ..., 'propN' => 'valueN');`
+Updating immutable properties:
+* `$cloned = $a->withFoo('new foo');`
+* `$cloned = $a->with('foo', 'new foo');`
+* `$cloned = $a->with(['foo' => 'new foo', 'bar' => 'new bar', ..., 'baz' => 'new baz');`
 
-To unset the value of property `$prop1`:
-* `unset($obj->prop1);`
-* `$obj->unsetProp1();`
-* `$obj->unset('prop1);`
-* `$obj->unset(['prop1', 'prop2', ..., 'propN');`
+Unsettings properties:
+* `unset($a->foo);`
+* `$a->unsetFoo();`
+* `$a->unset('foo);`
+* `$a->unset(['foo', 'bar', ..., 'baz');`
 
-To test if `$prop1` property is set. This is allowed/disabled with `Get` attribute:
-* `echo isset($obj->prop1);`
-* `echo $obj->issetProp1();`
-* `echo $obj->isset('prop1);`
+Checking if properties are initialized:
+* `isset($a->foo)`
+* `$a->issetFoo()`
+* `$a->isset('foo)`
