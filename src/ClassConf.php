@@ -15,26 +15,41 @@ namespace margusk\Accessors;
 use Closure;
 use margusk\Accessors\Attr\ICase;
 use margusk\Accessors\Exception\InvalidArgumentException;
+use PHPStan\PhpDocParser\Parser\PhpDocParser;
+use PHPStan\PhpDocParser\Parser\TypeParser;
+use PHPStan\PhpDocParser\Parser\ConstExprParser;
+use PHPStan\PhpDocParser\Parser\TokenIterator;
+use PHPStan\PhpDocParser\Lexer\Lexer;
+use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocTagNode;
+use PHPStan\PhpDocParser\Ast\PhpDoc\PropertyTagValueNode;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
 use ReflectionProperty;
+
+use function call_user_func;
+use function get_parent_class;
+use function is_string;
+use function preg_match;
+use function str_starts_with;
+use function strtolower;
+use function substr;
 
 final class ClassConf
 {
     /** @var self[] */
     private static array $classes = [];
 
-    /** @var array<string, Attributes> */
-    private static array $attributes = [];
+    /** @var Attributes */
+    private Attributes $attributes;
 
     /** @var ReflectionClass<object> */
     private ReflectionClass $rfClass;
 
-    /** @var PropertyConf[] */
+    /** @var Property[] */
     private array $properties = [];
 
-    /** @var PropertyConf[] */
+    /** @var Property[] */
     private array $propertiesByLcase = [];
 
     /** @var Closure */
@@ -57,44 +72,30 @@ final class ClassConf
     private function __construct(
         protected string $name
     ) {
+        /* Verify that the specified class is valid in every aspect */
         $this->rfClass = new ReflectionClass($this->name);
 
-        $this->getter = $this->createGetter();
-        $this->setter = $this->createSetter();
-        $this->isSetter = $this->createIssetter();
-        $this->unSetter = $this->createUnsetter();
+        /* Parse attributes of current class */
+        $this->attributes = Attributes::fromReflection($this->rfClass);
 
-        /* Parse attributes of current class and all it's ancestors */
-        if (!isset(self::$attributes[$this->name])) {
-            /** @var class-string[] $classHierarchy */
-            $classHierarchy = array_reverse((array)class_parents($this->name));
-            $classHierarchy[] = $this->name;
+        /* Require parent class to be parsed before current class, ... */
+        $parentName = get_parent_class($this->name);
 
-            $prevAttributes = null;
-
-            foreach ($classHierarchy as $name) {
-                if (!isset(self::$attributes[$name])) {
-                    $rf = ($name === $this->name) ? $this->rfClass : new ReflectionClass($name);
-
-                    $attributes = new Attributes($rf);
-
-                    if (null !== $prevAttributes) {
-                        $attributes = $attributes->mergeToParent($prevAttributes);
-                    }
-
-                    self::$attributes[$name] = $attributes;
-                }
-
-                $prevAttributes = self::$attributes[$name];
-            }
+        /* ...because attributes from current class need to be merged with parent one's */
+        if (false !== $parentName) {
+            $parent = self::factory($parentName);
+            $this->attributes = $this->attributes->mergeWithParent($parent->attributes);
         }
 
+        /* Learn from DocBlock comments which properties should be exposed and how (read-only,write-only or both) */
+        $docBlockAttributes = $this->parseDocBlock($this->rfClass);
+
         /**
-         * Find all existing set/get etc. methods which will handle the accessor functionality for each property
+         * Collect all manual accessor endpoints.
          *
-         * @var array<string, array<string, string>> $handlerMethodNames
+         * @var array<string, array<string, string>> $accessorEndpoints
          */
-        $handlerMethodNames = [];
+        $accessorEndpoints = [];
 
         foreach (
             $this->rfClass->getMethods(
@@ -108,7 +109,7 @@ final class ClassConf
                     $matches
                 )
             ) {
-                $handlerMethodNames[(string)$matches[2]][(string)$matches[1]] = $rfMethod->name;
+                $accessorEndpoints[(string)$matches[2]][(string)$matches[1]] = $rfMethod->name;
             }
         }
 
@@ -129,19 +130,24 @@ final class ClassConf
             $name = $rfProperty->getName();
             $nameLowerCase = strtolower($name);
 
-            $this->properties[$name] = new PropertyConf(
+            $this->properties[$name] = new Property(
                 $rfProperty,
-                self::$attributes[$this->name],
-                ($handlerMethodNames[$nameLowerCase] ?? [])
+                ($docBlockAttributes[$name] ?? $this->attributes),
+                ($accessorEndpoints[$nameLowerCase] ?? [])
             );
 
             $this->propertiesByLcase[$nameLowerCase] = $this->properties[$name];
         }
+
+        $this->getter = $this->createGetter();
+        $this->setter = $this->createSetter();
+        $this->isSetter = $this->createIssetter();
+        $this->unSetter = $this->createUnsetter();
     }
 
     private function createGetter(): Closure
     {
-        return (function (object $object, string $name, ?PropertyConf $propertyConf): mixed {
+        return (function (object $object, string $name, ?Property $propertyConf): mixed {
             if (null === $propertyConf) {
                 throw InvalidArgumentException::dueTriedToGetUnknownProperty(self::class, $name);
             }
@@ -154,10 +160,10 @@ final class ClassConf
                 throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(self::class, $name);
             }
 
-            $handler = $propertyConf->handlerMethodName('get');
+            $endpoint = $propertyConf->accessorEndpoint('get');
 
-            if (null !== $handler) {
-                return $object->{$handler}();
+            if (null !== $endpoint) {
+                return $object->{$endpoint}();
             }
 
             return $object->{$propertyConf->name()};
@@ -171,7 +177,7 @@ final class ClassConf
             string $accessorMethod,
             string $name,
             mixed $value,
-            ?PropertyConf $propertyConf
+            ?Property $propertyConf
         ): object {
             if (null === $propertyConf) {
                 throw InvalidArgumentException::dueTriedToSetUnknownProperty(self::class, $name);
@@ -185,10 +191,10 @@ final class ClassConf
                 throw InvalidArgumentException::dueTriedToSetMisconfiguredProperty(self::class, $name);
             }
 
-            $handler = $propertyConf->handlerMethodName($accessorMethod);
+            $endpoint = $propertyConf->accessorEndpoint($accessorMethod);
 
-            if (null !== $handler) {
-                $result = $object->{$handler}($value);
+            if (null !== $endpoint) {
+                $result = $object->{$endpoint}($value);
 
                 if ('with' === $accessorMethod && ($result instanceof (self::class))
                 ) {
@@ -210,7 +216,7 @@ final class ClassConf
 
     private function createIssetter(): Closure
     {
-        return (function (object $object, string $name, ?PropertyConf $propertyConf): bool {
+        return (function (object $object, string $name, ?Property $propertyConf): bool {
             if (null === $propertyConf) {
                 throw InvalidArgumentException::dueTriedToGetUnknownProperty(self::class, $name);
             }
@@ -223,10 +229,10 @@ final class ClassConf
                 throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(self::class, $name);
             }
 
-            $handler = $propertyConf->handlerMethodName('isset');
+            $endpoint = $propertyConf->accessorEndpoint('isset');
 
-            if (null !== $handler) {
-                return (bool)$object->{$handler}();
+            if (null !== $endpoint) {
+                return (bool)$object->{$endpoint}();
             }
 
             return isset($object->{$propertyConf->name()});
@@ -235,7 +241,7 @@ final class ClassConf
 
     private function createUnsetter(): Closure
     {
-        return (function (object $object, string $name, ?PropertyConf $propertyConf): object {
+        return (function (object $object, string $name, ?Property $propertyConf): object {
             if (null === $propertyConf) {
                 throw InvalidArgumentException::dueTriedToUnsetUnknownProperty(self::class, $name);
             }
@@ -255,10 +261,10 @@ final class ClassConf
                 );
             }
 
-            $handler = $propertyConf->handlerMethodName('unset');
+            $endpoint = $propertyConf->accessorEndpoint('unset');
 
-            if (null !== $handler) {
-                $object->{$handler}();
+            if (null !== $endpoint) {
+                $object->{$endpoint}();
             } else {
                 unset($object->{$propertyConf->name()});
             }
@@ -286,12 +292,12 @@ final class ClassConf
         return self::$classes[$name];
     }
 
-    public function findPropertyConf(string $name, bool $forceCaseInsensitive = false): ?PropertyConf
+    public function findPropertyConf(string $name, bool $forceCaseInsensitive = false): ?Property
     {
         if ($forceCaseInsensitive) {
             $caseInsensitive = true;
         } else {
-            $caseInsensitive = self::$attributes[$this->name]
+            $caseInsensitive = $this->attributes
                 ->get(ICase::class)
                 ?->enabled();
         }
@@ -323,5 +329,57 @@ final class ClassConf
     public function getUnSetter(): Closure
     {
         return $this->unSetter;
+    }
+
+    /**
+     * @param  ReflectionClass<object>  $rfClass
+     *
+     * @return array<string, Attributes>
+     */
+    private function parseDocBlock(ReflectionClass $rfClass): array
+    {
+        static $docBlockParser = null;
+        static $docBlockLexer = null;
+
+        $docComment = $rfClass->getDocComment();
+
+        if (!is_string($docComment)) {
+            return [];
+        }
+
+        if (null === $docBlockParser) {
+            $constExprParser = new ConstExprParser();
+
+            $docBlockParser = new PhpDocParser(
+                new TypeParser($constExprParser),
+                $constExprParser
+            );
+
+            $docBlockLexer = new Lexer();
+        }
+
+        $node = $docBlockParser->parse(
+            new TokenIterator(
+                $docBlockLexer->tokenize($docComment)
+            )
+        );
+
+        $result = [];
+
+        foreach ($node->children as $childNode) {
+            if ($childNode instanceof PhpDocTagNode
+                && $childNode->value instanceof PropertyTagValueNode
+                && str_starts_with($childNode->value->propertyName, '$')) {
+
+                $attributes = Attributes::fromDocBlock($childNode);
+
+                if (null !== $attributes) {
+                    $attributes->mergeWithParent($this->attributes);
+                    $result[substr($childNode->value->propertyName, 1)] = $attributes;
+                }
+            }
+        }
+
+        return $result;
     }
 }

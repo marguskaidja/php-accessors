@@ -20,7 +20,13 @@ use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
 use ReflectionProperty;
 
-class PropertyConf
+use function array_map;
+use function is_array;
+use function is_callable;
+use function method_exists;
+use function str_replace;
+
+class Property
 {
     /** @var string */
     private string $name;
@@ -49,19 +55,20 @@ class PropertyConf
     /**
      * @param  ReflectionProperty     $rfProperty
      * @param  Attributes             $classAttr
-     * @param  array<string, string>  $handlerMethodNames
+     * @param  array<string, string>  $accessorEndpoints
      */
     public function __construct(
         ReflectionProperty $rfProperty,
         Attributes $classAttr,
-        private array $handlerMethodNames
+        private array $accessorEndpoints
     ) {
         $this->name = $rfProperty->getName();
         $this->isPublic = $rfProperty->isPublic();
 
+        /* Discard all attributes on public properties */
         if (false === $this->isPublic) {
-            $this->attr = (new Attributes($rfProperty))
-                ->mergeToParent($classAttr);
+            $this->attr = Attributes::fromReflection($rfProperty)
+                ->mergeWithParent($classAttr);
 
             $this->isImmutable = ($this->attr->get(Immutable::class)?->enabled()) ?? false;
             $this->isGettable = ($this->attr->get(Get::class)?->enabled()) ?? false;
@@ -114,7 +121,7 @@ class PropertyConf
 
             $this->mutatorCallback = $mutatorCb;
         } else {
-            $this->attr = new Attributes(null);
+            $this->attr = new Attributes();
         }
     }
 
@@ -169,8 +176,8 @@ class PropertyConf
         return $this->isUnsettable;
     }
 
-    public function handlerMethodName(string $accessor): ?string
+    public function accessorEndpoint(string $accessor): ?string
     {
-        return $this->handlerMethodNames[$accessor] ?? null;
+        return $this->accessorEndpoints[$accessor] ?? null;
     }
 }

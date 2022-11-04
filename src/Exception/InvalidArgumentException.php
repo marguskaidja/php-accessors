@@ -12,6 +12,11 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Exception;
 
+use function gettype;
+use function implode;
+use function is_array;
+use function sprintf;
+
 final class InvalidArgumentException extends \InvalidArgumentException
 {
     /**

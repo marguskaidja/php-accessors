@@ -13,9 +13,14 @@ declare(strict_types=1);
 namespace margusk\Accessors;
 
 use margusk\Accessors\Attr\{Delete, Get, ICase, Immutable, Mutator, Set};
+use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocTagNode;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionProperty;
+
+use function array_fill_keys;
+use function array_key_exists;
+use function strtolower;
 
 class Attributes
 {
@@ -33,34 +38,12 @@ class Attributes
     /** @var array<class-string, Attr|null> */
     private array $attributes;
 
-    /**
-     * @param  ReflectionClass<object>|ReflectionProperty|null  $rfObject
-     */
-    public function __construct(ReflectionClass|ReflectionProperty|null $rfObject)
+    public function __construct()
     {
         $this->attributes = array_fill_keys(self::AVAILABLE_ATTR_NAMES, null);
-
-        /* $rfObject can be null to allow "empty" Attributes to be generated */
-        if (null !== $rfObject) {
-            // Read attributes from reflection object
-            foreach (
-                $rfObject->getAttributes(
-                    Attr::class,
-                    ReflectionAttribute::IS_INSTANCEOF
-                ) as $rfAttribute
-            ) {
-                $n = $rfAttribute->getName();
-
-                if (true === array_key_exists($n, $this->attributes)) {
-                    /** @var Attr $inst */
-                    $inst = $rfAttribute->newInstance();
-                    $this->attributes[$n] = $inst;
-                }
-            }
-        }
     }
 
-    public function mergeToParent(Attributes $parent): static
+    public function mergeWithParent(Attributes $parent): static
     {
         $new = clone $this;
 
@@ -76,5 +59,59 @@ class Attributes
     public function get(string $name): ?Attr
     {
         return $this->attributes[$name] ?? null;
+    }
+
+    /**
+     * @param  ReflectionClass<object>|ReflectionProperty  $rfObject
+     *
+     * @return self
+     */
+    public static function fromReflection(ReflectionClass|ReflectionProperty $rfObject): self
+    {
+        $that = new self();
+
+        foreach (
+            $rfObject->getAttributes(
+                Attr::class,
+                ReflectionAttribute::IS_INSTANCEOF
+            ) as $rfAttribute
+        ) {
+            $n = $rfAttribute->getName();
+
+            if (true === array_key_exists($n, $that->attributes)) {
+                /** @var Attr $inst */
+                $inst = $rfAttribute->newInstance();
+                $that->attributes[$n] = $inst;
+            }
+        }
+
+        return $that;
+    }
+
+    public static function fromDocBlock(PhpDocTagNode $tagNode): ?self
+    {
+        /** @var array<class-string<Attr>> $found */
+        $found = match(strtolower($tagNode->name)) {
+            '@property' => [Get::class, Set::class],
+            '@property-read' => [Get::class],
+            '@property-write' => [Set::class],
+            default => []
+        };
+
+        if (0 === count($found)) {
+            return null;
+        }
+
+        $that = new self();
+
+        foreach ($found as $n) {
+            if (true === array_key_exists($n, $that->attributes)) {
+                /** @var Attr $inst */
+                $inst = new $n(true);
+                $that->attributes[$n] = $inst;
+            }
+        }
+
+        return $that;
     }
 }

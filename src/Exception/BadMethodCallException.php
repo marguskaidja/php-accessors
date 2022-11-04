@@ -12,6 +12,9 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Exception;
 
+use function sprintf;
+use function ucfirst;
+
 final class BadMethodCallException extends \BadMethodCallException
 {
     public static function dueUnknownAccessorMethod(string $class, string $method): self

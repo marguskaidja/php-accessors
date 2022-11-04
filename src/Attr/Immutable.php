@@ -20,7 +20,6 @@ class Immutable extends Attr
 {
     public function __construct()
     {
-        /** @noinspection PhpRedundantOptionalArgumentInspection */
-        parent::__construct(true);
+        parent::__construct();
     }
 }

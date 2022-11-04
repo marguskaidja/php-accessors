@@ -16,6 +16,16 @@ use margusk\Accessors\Exception\BadMethodCallException;
 use margusk\Accessors\Exception\InvalidArgumentException;
 use ReflectionException;
 
+use function array_shift;
+use function count;
+use function current;
+use function in_array;
+use function is_array;
+use function is_string;
+use function strlen;
+use function strtolower;
+use function substr;
+
 trait Accessible
 {
     /**
