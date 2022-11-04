@@ -13,7 +13,6 @@ declare(strict_types=1);
 namespace margusk\Accessors;
 
 use Closure;
-use margusk\Accessors\Attr\ICase;
 use margusk\Accessors\Exception\InvalidArgumentException;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TypeParser;
@@ -292,17 +291,9 @@ final class ClassConf
         return self::$classes[$name];
     }
 
-    public function findPropertyConf(string $name, bool $forceCaseInsensitive = false): ?Property
+    public function findPropertyConf(string $name, bool $caseInsensitiveSearch = false): ?Property
     {
-        if ($forceCaseInsensitive) {
-            $caseInsensitive = true;
-        } else {
-            $caseInsensitive = $this->attributes
-                ->get(ICase::class)
-                ?->enabled();
-        }
-
-        if ($caseInsensitive) {
+        if ($caseInsensitiveSearch) {
             $propertyConf = $this->propertiesByLcase[strtolower($name)] ?? null;
         } else {
             $propertyConf = $this->properties[$name] ?? null;
