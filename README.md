@@ -1,7 +1,7 @@
 [![Tests](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml/badge.svg)](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml)
 # Accessors
 
-Current library can create automatic accessors (e.g. _getters_ and _setters_) for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class which will **handle** situations where attempt is made to access _inaccessible_ (`private`/`protected`) property.
+Current library can create automatic accessors (e.g. _getters_ and _setters_) for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class, which **handles** situations, where _inaccessible_ (`private`/`protected`) properties are accessed.
 
 Although it tries to stay as invisible as possible, the base concept is that the access for exposing properties to outside world must be configured explicitly. This can make it a bit more verbose from the solutions where accessors are created implicitly just based on existence/non-existence of some accessor method with specific name.
 
@@ -143,9 +143,9 @@ class A
 
     protected string $baz = "baz";
 }
-
-echo (new A())->getFoo();   // Outputs "foo"
-echo (new A())->getBar();   // Results in Exception
+$a = new A();
+echo $a->getFoo();   // Outputs "foo"
+echo $a->getBar();   // Results in Exception
 ```
 What about writing to properties? Yes, just add `#[Set]` attribute:
 
@@ -171,7 +171,7 @@ echo $a->setFoo("new foo")->getFoo();  // Outputs "new foo"
 $a->setBar("new bar");                 // Results in Exception
 ```
 
-But what about DocBlock tags? Yes! Same class from above, but configured with _DocBlock_:
+But what about _DocBlock_? Yes! Same class from above, but configured with _DocBlock_ tags:
 ```php
 use margusk\Accessors\Accessible;
 
@@ -190,6 +190,7 @@ class A
 
 $a = new A();
 echo $a->setFoo("new foo")->getFoo();   // Outputs "new foo"
+echo $a->bar;                           // Outputs "bar"
 $a->setBar("new bar");                  // Results in Exception
 ```
 
@@ -351,7 +352,7 @@ Notes: `Delete` is used as attribute name instead `Unset` because `Unset` is res
 
 ### Accessor endpoints
 
-If accessor logic should contain more than just straightforward "setting the property value" or "getting the property value", then manual endpoint methods can be created and the library uses them automatically.
+If accessor logic should contain more than just straightforward _assigning specified value to property_ or _giving property's value to caller_, then manual endpoint methods can be created and the library uses them automatically.
 
 Consider following example:
 ```php
@@ -387,14 +388,14 @@ echo $a->getFoo();    // Outputs "256" instead of "1023"
 The 2 endpoint handlers above (`getFoo`/`setFoo`) will be called in all situations:
 * when property is accessed with direct syntax (e.g. `$a->foo`)
 * when property is accessed using method syntax (e.g. `$a->getFoo()`)
-    * If the visibility of endpoint is public, then it's called by PHP engine.
-    * If visibility is hidden, then it goes through `__call` magic method provided by `Accessible` trait.
+    * If the visibility of endpoint is `public`, then it's called by PHP engine.
+    * If visibility is `private`/`protected`, then it goes through `__call` magic method provided by `Accessible` trait.
 
 Notes:
-* To be able to create endpoint handler, it must start with `set`, `get`, `isset`, `unset` or `with` prefix and follow with property name.
-* It must be non-static.
-* _mutator_ method is not called. Mutating should be done inside handler.
-* Return values from:
+* To have endpoint handler detecteed, it's name must start with string `set`, `get`, `isset`, `unset` or `with` and followed with property name.
+* Only instance methods are detected (`static` methods wont work).
+* _mutator_ is bypassed and should be done inside the endpoint itself.
+* Return values are handled as following. Values from:
     * `get` and `isset` endpoints are handed over to caller.
     * `set` and `unset` endpoints are discarded and current object instance is always returned.
     * `with` endpoint are handed over to caller **only if** value is `object` and derived from current class. Other values are discarded and original caller gets `clone`-d object instance.
@@ -516,7 +517,7 @@ echo $a->setFoo('foo is updated')->foo; // Outputs "foo is updated"
 echo $a->bar; // Outputs "bar"
 ```   
 Since the basic configuration will be read from `@property[<-read>|<-write>]` tags, there's no more configuration needed.
-So in addition of having magic properties documented, the properties `$foo` and `$bar` are also automatically exposed.
+So in addition of having magic properties documented, they are also automatically exposed.
 
 ## API
 
