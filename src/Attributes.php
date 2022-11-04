@@ -85,21 +85,12 @@ class Attributes
     public static function fromDocBlock(PhpDocTagNode $tagNode): ?self
     {
         /** @var array<class-string<Attr>> $found */
-        $found = [];
-
-        switch(strtolower($tagNode->name)) {
-            case '@property':
-                $found = [Get::class, Set::class];
-                break;
-
-            case '@property-read':
-                $found = [Get::class];
-                break;
-
-            case '@property-write':
-                $found = [Set::class];
-                break;
-        }
+        $found = match(strtolower($tagNode->name)) {
+            '@property' => [Get::class, Set::class],
+            '@property-read' => [Get::class],
+            '@property-write' => [Set::class],
+            default => []
+        };
 
         if (0 === count($found)) {
             return null;
