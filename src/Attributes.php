@@ -18,6 +18,10 @@ use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionProperty;
 
+use function array_fill_keys;
+use function array_key_exists;
+use function strtolower;
+
 class Attributes
 {
     /** @var class-string[] */
@@ -59,6 +63,8 @@ class Attributes
 
     /**
      * @param  ReflectionClass<object>|ReflectionProperty  $rfObject
+     *
+     * @return self
      */
     public static function fromReflection(ReflectionClass|ReflectionProperty $rfObject): self
     {

@@ -20,6 +20,12 @@ use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
 use ReflectionProperty;
 
+use function array_map;
+use function is_array;
+use function is_callable;
+use function method_exists;
+use function str_replace;
+
 class Property
 {
     /** @var string */

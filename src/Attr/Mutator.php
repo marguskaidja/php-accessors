@@ -15,6 +15,14 @@ namespace margusk\Accessors\Attr;
 use Attribute;
 use margusk\Accessors\Attr;
 
+use function array_values;
+use function count;
+use function explode;
+use function is_array;
+use function is_string;
+use function preg_match;
+use function trim;
+
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
 class Mutator extends Attr
 {
