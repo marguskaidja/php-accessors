@@ -1,9 +1,7 @@
 [![Tests](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml/badge.svg)](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml)
 # Accessors
 
-Current library can create automatic accessors (e.g. _getters_ and _setters_) for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class, which **handles** situations, where _inaccessible_ (`private`/`protected`) property is accessed.
-
-Although it tries to stay as invisible as possible, the base concept is that the access for exposing properties to outside world must be configured explicitly. This can make it a bit more verbose from the solutions where accessors are created implicitly just based on existence/non-existence of some accessor method with specific name.
+Current library can create automatic accessors (e.g. _getters_ and _setters_) for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class, which will then handle situations, where _inaccessible_ (`private`/`protected`) property is accessed.
 
 #### Features
 * Multiple accessor **syntaxes**:
@@ -232,7 +230,7 @@ $a = new A(1, 2, 3, 4, 5, 6);
 $b = new B($a->a, $a->b,  $a->c,  $a->d,  $a->e,  7);
 ```
 
-With `#[Immutable]` flag things get simpler:
+With `#[Immutable]` attribute things get simpler:
 
 ```php
 use margusk\Accessors\Attr\{
@@ -286,7 +284,7 @@ Notes:
 
 ### Mutator
 
-Sometimes it's necessary to have the assignable value passed through some simple intermediate function, before assigning to property. This function called _mutator_ and can be specified using `#[Mutator]` attribute:
+With _setters_, it's sometimes necessary to have the assignable value passed through some intermediate function, before assigning to property. This function is called _mutator_ and can be specified using `#[Mutator]` attribute:
 
 ```php
 use margusk\Accessors\Attr\{
@@ -303,7 +301,9 @@ class A
     protected string $foo;
 }
 
-echo (new A())->setFoo('<>')->getFoo();  // Outputs "&lt;&gt;"
+$a = (new A());
+$a->setFoo('<>');
+echo $a->getFoo();      // Outputs "&lt;&gt;"
 ```
 
 It can validate or otherwise manipulate the value before beeing assigned to property.
@@ -313,17 +313,15 @@ _Mutator_ parameter must be string or array representing a PHP `callable`. When 
 1. `<class>::<method>`
 1. `$this-><method>` (`$this` is replaced during runtime with the object instance where the accessor belongs)
 
-It may contain special variable named `%property%` which is replaced with the property name it applies. This is useful only when specifying mutator globally in class attribute.
+It may contain special variable named `%property%` which is replaced with the property name it applies. This is useful when using separate mutator for each property but declaring it only once within class attributes.
 
 The callable function/method must accept assignable value as first parameter and must return a value to be assigned to property.
 
-Note that mutator has very simple use cases. If more complex handling is needed then accessor endpoint handlers should be used (see below).  
-
 ### Accessor endpoints
 
-If accessor logic should contain more than just straightforward _assigning specified value to property_ or _giving property's value to caller_, then manual endpoint methods can be created and this library uses those automatically.
+Current library can make use of any manually created accessor methods with prefixes `set`, `get`, `isset`, `unset` or `with` and followed by property name. Those are here referred as accessor endpoints.
 
-Consider following example:
+For example, this allows seamless integration where current library provides _direct assignment syntax_ on top of existing _method syntax_:
 ```php
 use margusk\Accessors\Attr\{
     Get, Set
@@ -336,17 +334,15 @@ class A
     use Accessible;
 
     protected int $foo = 0;
-    protected int $count = 0;
 
-    protected function getFoo(): int
+    public function getFoo(): int
     {
         return $this->foo + 1;
     }
 
-    protected function setFoo(int $value): void
+    public function setFoo(int $value): void
     {
         $this->foo = $value & 0xFF;
-        $this->count++;
     }
 }
 
@@ -356,16 +352,16 @@ echo $a->foo;         // Outputs "256" instead of "1023"
 echo $a->getFoo();    // Outputs "256" instead of "1023"
 ```
 
-The 2 endpoint handlers above (`getFoo`/`setFoo`) will be called in all situations:
-* when property is accessed with direct syntax (e.g. `$a->foo`)
-* when property is accessed using method syntax (e.g. `$a->getFoo()`)
-    * If the visibility of endpoint is `public`, then it's called by PHP engine.
-    * If visibility is `private`/`protected`, then it goes through `__call` magic method provided by `Accessible` trait.
+The 2 endpoints (`getFoo`/`setFoo`) will be called in every situation:
+* either when property is accessed with direct assignment syntax (e.g. `$a->foo`)
+* or when property is accessed with method syntax (e.g. `$a->getFoo()`)
+    * if the visibility of endpoint is `public`, then it's naturally called by PHP engine.
+    * if it's `private`/`protected`, then it goes through `__call` magic method provided by `Accessible` trait.
 
 Notes:
-* To have endpoint handler detected, it's name must start with string `set`, `get`, `isset`, `unset` or `with` and followed with property name.
+* To have endpoint detected, it's name must start with string `set`, `get`, `isset`, `unset` or `with` and followed with property name.
 * Only instance methods are detected (`static` methods wont work).
-* _mutator_ is bypassed and should be done inside the endpoint itself.
+* _mutator_ is bypassed and should be done inside the setter endpoint itself.
 * Return values from endpoints are handled as following. Values from:
     * `get` and `isset` are handed over to caller.
     * `set` and `unset` are discarded and current object instance is always returned.
@@ -499,12 +495,12 @@ Since `@property[<-read>|<-write>]` tags act also for exposing properties (inste
 
 ## API
 
-### Configuration aka exposing properties
+### Exposing properties
 
 1. Use `margusk\Accessors\Accessible` trait inside the class which properties you want to expose.
 2. Configure with following attributes:
    *  Use `#[Get]`, `#[Set]` and/or `#[Delete]` (from namespace `margusk\Accessors\Attr`) before the declaration of the property or whole you want to expose:
-       * All take optional single `bool` parameter which can be set to `false` to deny specific accessor for the property or whole class. This is useful in situtations where override from previous setting is needed.
+       * All them take optional `bool` parameter which can be set to `false` to deny specific accessor for the property or whole class. This is useful in situtations where override from previous setting is needed.
        * `#[Get(bool $enabled = true)]`: allow or disable read access to property. Works in conjunction with allowing/denying `isset` on property.
        * `#[Set(bool $enabled = true)]`: allow or disable to write access the property.
        * `#[Delete(bool $enabled = true)]`: allow or disable `unset()` of the property.
@@ -517,31 +513,31 @@ Since `@property[<-read>|<-write>]` tags act also for exposing properties (inste
 
 ### Properties can be accessed with following syntaxes:
 
-Reading properties:
-* `$obj->foo`
-* `$obj->getFoo()`
-* `$obj->get('foo)`
-* `$obj->foo()`
+#### Reading properties:
+* `$value = $obj->foo;`
+* `$value = $obj->getFoo();`
+* `$value = $obj->get('foo');`
+* `$value = $obj->foo();`
 
-Updating mutable properties:
+#### Updating mutable properties (allows method chaining):
 * `$a->foo = 'new foo';`
-* `$a->setFoo('new foo');`
-* `$a->set('foo', 'new foo');`
-* `$a->set(['foo' => 'new foo', 'bar' => 'new bar', ..., 'baz' => 'new baz');`
-* `$a->foo('some value');`
+* `$a = $a->setFoo('new foo')->setBar('new bar');`
+* `$a = $a->set('foo', 'new foo')->set('bar', 'new bar');`
+* `$a = $a->set(['foo' => 'new foo', 'bar' => 'new bar', ..., 'baz' => 'new baz');`
+* `$a = $a->foo('new foo')->bar('new bar');`
 
-Updating immutable properties:
-* `$cloned = $a->withFoo('new foo');`
-* `$cloned = $a->with('foo', 'new foo');`
-* `$cloned = $a->with(['foo' => 'new foo', 'bar' => 'new bar', ..., 'baz' => 'new baz');`
+#### Updating immutable properties (allows method chaining):
+* `$b = $a->withFoo('new foo')->withBar('new bar');`
+* `$b = $a->with('foo', 'new foo')->with('bar', 'new bar');`
+* `$b = $a->with(['foo' => 'new foo', 'bar' => 'new bar', ..., 'baz' => 'new baz');`
 
-Unsettings properties:
+#### Unsetting properties (allows method chaining):
 * `unset($a->foo);`
-* `$a->unsetFoo();`
-* `$a->unset('foo);`
-* `$a->unset(['foo', 'bar', ..., 'baz');`
+* `$a = $a->unsetFoo()->unsetBar();`
+* `$a = $a->unset('foo')->unset('bar');`
+* `$a = $a->unset(['foo', 'bar', ..., 'baz');`
 
-Checking if properties are initialized:
-* `isset($a->foo)`
-* `$a->issetFoo()`
-* `$a->isset('foo)`
+#### Checking if property is initialized (returns `bool`):
+* `$isFooSet = isset($a->foo);`
+* `$isFooSet = $a->issetFoo();`
+* `$isFooSet = $a->isset('foo');`
