@@ -36,5 +36,9 @@
         "psr-4": {
             "margusk\\Accessors\\Tests\\": "tests/"
         }
+    },
+    "scripts": {
+        "tests": "vendor/bin/phpunit",
+        "phpstan": "vendor/bin/phpstan analyse src/ tests/ -l 9"
     }
 }
