@@ -42,7 +42,8 @@ trait Accessible
         $lcaseMethod = strtolower($method);
 
         // Try to extract accessor method from magic method name
-        if (!in_array(($accessorMethod = substr($lcaseMethod, 0, 3)), ['get', 'set'], true)
+        if (
+            !in_array(($accessorMethod = substr($lcaseMethod, 0, 3)), ['get', 'set'], true)
             && 'with' !== ($accessorMethod = substr($lcaseMethod, 0, 4))
             && !in_array(($accessorMethod = substr($lcaseMethod, 0, 5)), ['unset', 'isset'], true)
         ) {
@@ -57,7 +58,8 @@ trait Accessible
 
         // Check if the call is multi-property accessor, that is if first
         // argument is array and accessor method is set at this point and is "set", "with" or "unset"
-        if ('' === $propertyName
+        if (
+            '' === $propertyName
             && $nArgs > 0
             && is_array(current($args))
             && ($accessorMethodIsSetOrWith || 'unset' === $accessorMethod)
@@ -74,7 +76,10 @@ trait Accessible
 
             // Check if whole method name is property name like
             //  $obj->somePropertyName('somevalue')
-        } elseif (null === $accessorMethod && null !== $classConf->findPropertyConf($propertyName, true)) {
+        } elseif (
+            null === $accessorMethod
+            && null !== $classConf->properties()->findConf($propertyName, true)
+        ) {
             // If there are zero arguments, then interpret the call as Getter
             // If there are arguments, then it's Setter
             if ($nArgs > 0) {
@@ -163,13 +168,14 @@ trait Accessible
                     );
                 }
 
-                $propertyConf = $classConf->findPropertyConf($propertyName, $propertyNameCI);
+                $propertyConf = $classConf->properties()->findConf($propertyName, $propertyNameCI);
                 $immutable = ($propertyConf?->isImmutable()) ?? false;
 
                 // Check if mutable/immutable property was called using correct method:
                 //  - mutable properties must be accessed using "set"
                 //  - immutable properties must be accessed using "with"
-                if (($immutable === true && 'set' === $accessorMethod)
+                if (
+                    ($immutable === true && 'set' === $accessorMethod)
                     || ($immutable === false && 'with' === $accessorMethod)
                 ) {
                     if ($immutable) {
@@ -204,7 +210,7 @@ trait Accessible
                     );
                 }
 
-                $propertyConf = $classConf->findPropertyConf($propertyName, $propertyNameCI);
+                $propertyConf = $classConf->properties()->findConf($propertyName, $propertyNameCI);
                 $result = $accessorImpl($result, $propertyName, $propertyConf);
             }
         }
@@ -221,7 +227,7 @@ trait Accessible
     public function __get(string $propertyName): mixed
     {
         $classConf = ClassConf::factory(static::class);
-        $propertyConf = $classConf->findPropertyConf($propertyName);
+        $propertyConf = $classConf->properties()->findConf($propertyName);
 
         return ($classConf->getGetter())($this, $propertyName, $propertyConf);
     }
@@ -236,7 +242,7 @@ trait Accessible
     public function __set(string $propertyName, mixed $propertyValue): void
     {
         $classConf = ClassConf::factory(static::class);
-        $propertyConf = $classConf->findPropertyConf($propertyName);
+        $propertyConf = $classConf->properties()->findConf($propertyName);
         $immutable = $propertyConf?->isImmutable();
 
         if ($immutable) {
@@ -258,7 +264,7 @@ trait Accessible
     public function __isset(string $propertyName): bool
     {
         $classConf = ClassConf::factory(static::class);
-        $propertyConf = $classConf->findPropertyConf($propertyName);
+        $propertyConf = $classConf->properties()->findConf($propertyName);
 
         return ($classConf->getIsSetter())($this, $propertyName, $propertyConf);
     }
@@ -272,7 +278,7 @@ trait Accessible
     public function __unset(string $propertyName): void
     {
         $classConf = ClassConf::factory(static::class);
-        $propertyConf = $classConf->findPropertyConf($propertyName);
+        $propertyConf = $classConf->properties()->findConf($propertyName);
 
         ($classConf->getUnSetter())($this, $propertyName, $propertyConf);
     }
