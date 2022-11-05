@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\Accessors;
 
-use margusk\Accessors\Attr\{Delete, Get, ICase, Immutable, Mutator, Set};
+use margusk\Accessors\Attr\{Delete, Get, Immutable, Mutator, Set};
 use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocTagNode;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -31,7 +31,6 @@ class Attributes
             Set::class,
             Delete::class,
             Mutator::class,
-            ICase::class,
             Immutable::class
         ];
 
