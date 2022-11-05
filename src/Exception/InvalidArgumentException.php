@@ -20,9 +20,9 @@ use function sprintf;
 final class InvalidArgumentException extends \InvalidArgumentException
 {
     /**
-     * @param  string  $class
-     * @param  string  $property
-     * @param  string[]  $callable
+     * @param  string           $class
+     * @param  string           $property
+     * @param  string|string[]  $callable
      *
      * @return static
      */
