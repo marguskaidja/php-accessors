@@ -34,7 +34,7 @@ class Property
     /** @var Attributes */
     private Attributes $attr;
 
-    /** @var string|array<int, null|string>|null */
+    /** @var string|string[]|null */
     private string|array|null $mutatorCallback = null;
 
     /** @var bool */
@@ -80,17 +80,13 @@ class Property
             $mutatorCb = $mutator?->mutator();
 
             if (is_array($mutatorCb) && 2 === count($mutatorCb)) {
-                $mutatorCb = array_map(function (?string $s): ?string {
-                    if (null !== $s) {
-                        $s = str_replace('%property%', $this->name, $s);
-                    }
-
-                    return $s;
+                $mutatorCb = array_map(function (string $s): string {
+                    return str_replace('%property%', $this->name, $s);
                 }, $mutatorCb);
 
                 $check = $mutatorCb;
 
-                if (null === $mutatorCb[0]) {
+                if ('' === $mutatorCb[0]) {
                     $check[0] = $rfProperty->class;
                 }
 
@@ -132,14 +128,12 @@ class Property
 
     public function mutator(object $object): ?callable
     {
-        if (null === $this->mutatorCallback) {
-            return null;
-        }
-
         $mutatorCb = $this->mutatorCallback;
 
-        if (is_array($mutatorCb) && null === $mutatorCb[0]) {
-            $mutatorCb[0] = $object;
+        if (null !== $this->mutatorCallback) {
+            if (is_array($mutatorCb) && '' === $mutatorCb[0]) {
+                $mutatorCb[0] = $object;
+            }
         }
 
         /** @var callable|null $mutatorCb */

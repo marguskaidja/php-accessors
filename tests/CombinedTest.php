@@ -13,12 +13,12 @@ declare(strict_types=1);
 namespace margusk\Accessors\Tests;
 
 use margusk\Accessors\Accessible;
-use margusk\Accessors\Attr\{Get, ICase as CI, Set};
+use margusk\Accessors\Attr\{Get, Set};
 use margusk\Accessors\Exception\InvalidArgumentException;
 
 class CombinedTest extends TestCase
 {
-    public function test_direct_access_with_case_sensitivity_and_no_match_must_fail(): void
+    public function test_direct_syntax_with_invalid_name_case_must_fail(): void
     {
         $obj = new #[Get] class {
             use Accessible;
@@ -36,7 +36,7 @@ class CombinedTest extends TestCase
         $obj->propertY;
     }
 
-    public function test_flexible_method_call_access_with_case_sensitivity_and_no_match_must_fail(): void
+    public function test_method_syntax_with_property_as_argument_with_invalid_case_must_fail(): void
     {
         $obj = new #[Get] class {
             use Accessible;
@@ -51,7 +51,7 @@ class CombinedTest extends TestCase
         $obj->get('PROPerty');
     }
 
-    public function test_property_name_is_case_insensitive_when_accessing_in_method_syntax(): void
+    public function test_method_syntax_with_property_as_part_of_method_name_must_succeed(): void
     {
         $obj = new #[Get, Set] class {
             use Accessible;
@@ -75,29 +75,9 @@ class CombinedTest extends TestCase
         );
     }
 
-    public function test_property_name_is_case_insensitive_when_accessing_in_direct_syntax(): void
-    {
-        $obj = new #[Get, Set, CI] class {
-            use Accessible;
-
-            protected string $PropertY;
-        };
-
-        $value = 'some value';
-
-        /** @phpstan-ignore-next-line */
-        $obj->proPerTy = $value;
-
-        $this->assertEquals(
-            $value,
-            /** @phpstan-ignore-next-line */
-            $obj->prOperTy
-        );
-    }
-
     public function test_parent_class_is_parsed_correctly_later_when_child_is_accessed_first(): void
     {
-        $child = new #[Get, Set, CI] class extends ParentTestClassForAccessOrder {
+        $child = new #[Get, Set] class extends ParentTestClassForAccessOrder {
             use Accessible;
         };
 

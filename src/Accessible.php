@@ -90,7 +90,7 @@ trait Accessible
             throw BadMethodCallException::dueUnknownAccessorMethod(static::class, $method);
         }
 
-        $forcePropertyNameToCaseInsensitive = false;
+        $propertyNameCI = false;
 
         // If accessorProperties are not set at this point (thus not specified using array
         // as first parameter to set or with), then extract them as separate arguments to current method
@@ -113,7 +113,7 @@ trait Accessible
             } else {
                 // If we arrive here, then property name was specified partially or fully in method name and
                 // in this case we always interpret it as case-insensitive
-                $forcePropertyNameToCaseInsensitive = true;
+                $propertyNameCI = true;
             }
 
             if ($accessorMethodIsSetOrWith) {
@@ -163,7 +163,7 @@ trait Accessible
                     );
                 }
 
-                $propertyConf = $classConf->findPropertyConf($propertyName, $forcePropertyNameToCaseInsensitive);
+                $propertyConf = $classConf->findPropertyConf($propertyName, $propertyNameCI);
                 $immutable = ($propertyConf?->isImmutable()) ?? false;
 
                 // Check if mutable/immutable property was called using correct method:
@@ -204,7 +204,7 @@ trait Accessible
                     );
                 }
 
-                $propertyConf = $classConf->findPropertyConf($propertyName, $forcePropertyNameToCaseInsensitive);
+                $propertyConf = $classConf->findPropertyConf($propertyName, $propertyNameCI);
                 $result = $accessorImpl($result, $propertyName, $propertyConf);
             }
         }

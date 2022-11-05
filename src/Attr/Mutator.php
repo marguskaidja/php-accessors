@@ -37,7 +37,7 @@ class Mutator extends Attr
     ) {
         if (is_string($mutator)) {
             if (preg_match('/^\$this->(.+)/', trim($mutator), $matches)) {
-                $mutator = [null, $matches[1]];
+                $mutator = ['', $matches[1]];
             } else {
                 $mutator = explode('::', $mutator, 2);
 
