@@ -18,16 +18,16 @@ Current library can create automatic accessors (e.g. _getters_ and _setters_) fo
 * Easy and straightforward **configuration** using [Attributes](https://www.php.net/manual/en/language.attributes.overview.php):
     * No custom initialization code has to be called from class constructors to make things work.
     * Accessors can be configured _per_ property or for all class at once.
-    * Inheritance and override support. E.g. set default behaviour for whole class and make exceptions based on specific properties.
-    * No variables, functions or methods (except `__get()`/`__set()`/`__isset()`/`__unset()`/`__call()`) will be polluted into user classes or global namespace.
-    * [_DocBlock_](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) tags `@property`, `@property-read` and `@property-write` are also supported and can be used instead of Attributes on basic cases.
+    * Inheritance and override support. E.g. set default behaviour for whole class and make exceptions for specific properties.
+    * No variables, functions nor methods will be polluted into user classes or global namespace (except necessary `__get()`/`__set()`/`__isset()`/`__unset()`/`__call()`).
+    * [_PHPDoc_](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) tags `@property`, `@property-read` and `@property-write` are also supported and can be used instead of Attributes on basic cases.
 * _Weak_ **immutability** support backed by _wither_ methods.
 * **Mutator** support for _setters_.
 
 ## Requirements
 
 PHP >= 8.0
-
+~~~~
 ## Installation
 
 Install with composer:
@@ -96,7 +96,7 @@ echo $a->getFoo();  // Outputs "foo"
 echo $a->getBar();  // Outputs "bar"
 echo $a->getBaz();  // Outputs "baz"
 ```
-Besides the fact that boilerplate code for _getters_ has been avoided, there's also  _direct assignment_ syntax available, which wasn't even possible with initial object:
+Besides the fact that boilerplate code for _getters_ has been avoided, there's also  _direct assignment_ syntax available now, which wasn't even possible with initial object:
 ```php
 echo $a->foo;  // Outputs "foo"
 echo $a->bar;  // Outputs "bar"
@@ -168,7 +168,10 @@ echo $a->setFoo("new foo")->getFoo();  // Outputs "new foo"
 $a->setBar("new bar");                 // Results in Exception
 ```
 
-What about _DocBlock_? Yes! Same class from above, but now configured using _DocBlock_ tags:
+But can't I use _PHPDoc_ tags to indicate the readability and writability of a property?
+
+Sure can! Same class from above, but configured using _PHPDoc_ tags:
+
 ```php
 use margusk\Accessors\Accessible;
 
@@ -306,7 +309,7 @@ $a->setFoo('<>');
 echo $a->getFoo();      // Outputs "&lt;&gt;"
 ```
 
-It can validate or otherwise manipulate the value before beeing assigned to property.
+It can validate or otherwise manipulate the value beeing assigned to property.
 
 _Mutator_ parameter must be string or array representing a PHP `callable`. When string is passed then it must have one of following syntaxes:
 1. `<function>`
@@ -359,8 +362,8 @@ The 2 endpoints (`getFoo`/`setFoo`) will be called in every situation:
     * if it's `private`/`protected`, then it goes through `__call` magic method provided by `Accessible` trait.
 
 Notes:
-* To have endpoint detected, it's name must start with string `set`, `get`, `isset`, `unset` or `with` and followed with property name.
-* Only instance methods are detected (`static` methods wont work).
+* Endpoint methods must start with string `set`, `get`, `isset`, `unset` or `with` and followed with property name.
+* Only instance methods are detected, `static` methods wont work.
 * _mutator_ is bypassed and should be done inside the setter endpoint itself.
 * Return values from endpoints are handled as following. Values from:
     * `get` and `isset` are handed over to caller.
@@ -465,7 +468,7 @@ echo $a->Foo;               // Results in Exception because property "Foo" doesn
 
 Having accessors with _magic methods_ can bring the disadvantages of losing somewhat of IDE autocompletion and make static code analyzers grope in the dark.
 
-To inform static code parsers about available magic methods and properties, PHPDoc [@method](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/method.html) and/or [@property](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) tags can be specified in front of the class:
+To inform static code parsers about availability of magic methods and properties, PHPDoc [@method](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/method.html) and [@property](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) should be specified in classes DocBlock:
 
 ```php
 use margusk\Accessors\Accessible;
@@ -491,7 +494,7 @@ echo $a->setFoo('foo is updated')->foo; // Outputs "foo is updated"
 echo $a->bar; // Outputs "bar"
 ```   
 
-Since `@property[<-read>|<-write>]` tags act also for exposing properties (instead of Attributes), you get automatically the documented behaviour.
+Since `@property[<-read>|<-write>]` tags act also in exposing properties, you get the documentation and the actual documented behaviour **both at the same time**.
 
 ## API
 
@@ -519,19 +522,19 @@ Since `@property[<-read>|<-write>]` tags act also for exposing properties (inste
 * `$value = $obj->get('foo');`
 * `$value = $obj->foo();`
 
-#### Updating mutable properties (allows method chaining):
+#### Updating mutable properties (supports method chaining):
 * `$a->foo = 'new foo';`
 * `$a = $a->setFoo('new foo')->setBar('new bar');`
 * `$a = $a->set('foo', 'new foo')->set('bar', 'new bar');`
 * `$a = $a->set(['foo' => 'new foo', 'bar' => 'new bar', ..., 'baz' => 'new baz');`
 * `$a = $a->foo('new foo')->bar('new bar');`
 
-#### Updating immutable properties (allows method chaining):
+#### Updating immutable properties (supports method chaining):
 * `$b = $a->withFoo('new foo')->withBar('new bar');`
 * `$b = $a->with('foo', 'new foo')->with('bar', 'new bar');`
 * `$b = $a->with(['foo' => 'new foo', 'bar' => 'new bar', ..., 'baz' => 'new baz');`
 
-#### Unsetting properties (allows method chaining):
+#### Unsetting properties (supports method chaining):
 * `unset($a->foo);`
 * `$a = $a->unsetFoo()->unsetBar();`
 * `$a = $a->unset('foo')->unset('bar');`
