@@ -25,7 +25,6 @@ use ReflectionMethod;
 use ReflectionProperty;
 
 use function is_string;
-use function preg_match;
 use function strtolower;
 use function substr;
 
