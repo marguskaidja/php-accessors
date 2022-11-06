@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\Accessors;
 
-use margusk\Accessors\Attr\{Delete, Get, Immutable, Mutator, Set};
+use margusk\Accessors\Attr\{Delete, Get, Immutable, Mutator, Set, Template};
 use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocTagNode;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -31,7 +31,8 @@ class Attributes
             Set::class,
             Delete::class,
             Mutator::class,
-            Immutable::class
+            Immutable::class,
+            Template::class
         ];
 
     /** @var array<class-string, Attr|null> */
@@ -58,6 +59,24 @@ class Attributes
     public function get(string $name): ?Attr
     {
         return $this->attributes[$name] ?? null;
+    }
+
+    /**
+     * @param  class-string $name
+     * @param  Attr         $attr
+     *
+     * @return $this
+     */
+    public function setIfNull(string $name, Attr $attr): self
+    {
+        if (
+            true === array_key_exists($name, $this->attributes)
+            && null === $this->attributes[$name]
+        ) {
+            $this->attributes[$name] = $attr;
+        }
+
+        return $this;
     }
 
     /**

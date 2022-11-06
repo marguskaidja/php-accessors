@@ -13,17 +13,34 @@ declare(strict_types=1);
 namespace margusk\Accessors;
 
 use Closure;
+use margusk\Accessors\Attr\{Immutable, Template};
+use margusk\Accessors\Exception\BadMethodCallException;
 use margusk\Accessors\Exception\InvalidArgumentException;
+use margusk\Accessors\Template\Contract as TemplateContract;
+use margusk\Accessors\Template\Method;
+use margusk\Accessors\Template\Standard;
 use ReflectionClass;
 use ReflectionException;
 
+use function array_shift;
 use function call_user_func;
+use function count;
+use function current;
 use function get_parent_class;
+use function in_array;
+use function is_string;
+use function sprintf;
+use function strlen;
+use function strtolower;
+use function substr;
 
 final class ClassConf
 {
     /** @var self[] */
     private static array $classes = [];
+
+    /** @var ClassConf|null */
+    private ?ClassConf $parent;
 
     /** @var Attributes */
     private Attributes $attributes;
@@ -43,6 +60,9 @@ final class ClassConf
     /** @var Closure */
     private Closure $isSetter;
 
+    /** @var bool */
+    private bool $isAccessible;
+
     /**
      * @param  class-string  $name
      *
@@ -51,27 +71,75 @@ final class ClassConf
     private function __construct(
         protected string $name
     ) {
-        /* Verify that the specified class is valid in every aspect */
+        /* Verify that the specified class is valid */
         $rfClass = new ReflectionClass($this->name);
 
-        /* First parse attributes of current class */
-        $this->attributes = Attributes::fromReflection($rfClass);
-
-        /* Next require parent class to be initialized before current, ... */
+        /* Require parent class to be initialized before current */
         $parentName = get_parent_class($this->name);
 
-        /* ...because attributes from parent class need to be merged into current */
-        if (false !== $parentName) {
-            $parent = self::factory($parentName);
-            $this->attributes = $this->attributes->mergeWithParent($parent->attributes);
+        $this->parent = (
+            false !== $parentName ?
+                self::factory($parentName) :
+                null
+        );
+
+        /* Check if parent class or current contains 'Accessible' trait */
+        $isParentAccessible = ($this->parent ? $this->parent->isAccessible : false);
+        $this->isAccessible = $isParentAccessible
+            || in_array(
+                Accessible::class,
+                $rfClass->getTraitNames(),
+                true
+            );
+
+        /* Don't parse anything unless current class uses Accessible trait */
+        if ($this->isAccessible) {
+            /* Parse attributes of current class */
+            $this->attributes = Attributes::fromReflection($rfClass);
+
+            if ($isParentAccessible) {
+                /** @var ClassConf $parent */
+                $parent = $this->parent;
+
+                /* Verify that child doesn't declare #[Immutable] and #[Template] */
+                foreach ([Immutable::class, Template::class] as $n) {
+                    if (null !== $this->attributes->get($n)) {
+                        /* Find out the top of hierarchy */
+                        while ($parent->parent && $parent->parent->isAccessible) {
+                            $parent = $parent->parent;
+                        }
+
+                        throw InvalidArgumentException::dueClassAttributeCanOccurOnceOnTopOfHierarchy(
+                            $parent->name,
+                            $this->name,
+                            $n
+                        );
+                    }
+                }
+
+                $this->attributes = $this->attributes->mergeWithParent($parent->attributes);
+            } else {
+                /**
+                 * Since this is the top of the hierachy using "Accessible" trait, assign default instance
+                 * for #[Template] attribute if it's not custom defined.
+                 */
+                $this->attributes->setIfNull(
+                    Template::class,
+                    new Template(Standard::class)
+                );
+            }
+
+            $this->properties = Properties::fromReflection($rfClass, $this->attributes);
+
+            $this->getter = $this->createGetter();
+            $this->setter = $this->createSetter();
+            $this->isSetter = $this->createIssetter();
+            $this->unSetter = $this->createUnsetter();
+        } else {
+            /* Attributes in non-Accessible classes have no effect */
+            $this->attributes = new Attributes();
+            $this->properties = new Properties();
         }
-
-        $this->properties = new Properties($rfClass, $this->attributes);
-
-        $this->getter = $this->createGetter();
-        $this->setter = $this->createSetter();
-        $this->isSetter = $this->createIssetter();
-        $this->unSetter = $this->createUnsetter();
     }
 
     private function createGetter(): Closure
@@ -89,7 +157,7 @@ final class ClassConf
                 throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(self::class, $name);
             }
 
-            $endpoint = $propertyConf->accessorEndpoint('get');
+            $endpoint = $propertyConf->accessorEndpoint(Method::TYPE_GET);
 
             if (null !== $endpoint) {
                 return $object->{$endpoint}();
@@ -126,7 +194,7 @@ final class ClassConf
                 $result = $object->{$endpoint}($value);
 
                 if (
-                    'with' === $accessorMethod
+                    Method::TYPE_WITH === $accessorMethod
                     && ($result instanceof (self::class))
                 ) {
                     $object = $result;
@@ -160,7 +228,7 @@ final class ClassConf
                 throw InvalidArgumentException::dueTriedToGetMisconfiguredProperty(self::class, $name);
             }
 
-            $endpoint = $propertyConf->accessorEndpoint('isset');
+            $endpoint = $propertyConf->accessorEndpoint(Method::TYPE_ISSET);
 
             if (null !== $endpoint) {
                 return (bool)$object->{$endpoint}();
@@ -192,7 +260,7 @@ final class ClassConf
                 );
             }
 
-            $endpoint = $propertyConf->accessorEndpoint('unset');
+            $endpoint = $propertyConf->accessorEndpoint(Method::TYPE_UNSET);
 
             if (null !== $endpoint) {
                 $object->{$endpoint}();
@@ -223,28 +291,243 @@ final class ClassConf
         return self::$classes[$name];
     }
 
-    public function properties(): Properties
+    /**
+     * @param  string   $method
+     * @param  mixed[]  $args
+     * @param  object   $object
+     *
+     * @return mixed
+     */
+    public function handleMagicCall(object $object, string $method, array $args): mixed
     {
-        return $this->properties;
+        /** @var Template $attr */
+        $attr = $this->attributes->get(Template::class);
+        $template = $attr->instance();
+
+        if (null !== ($parsedMethod = $template->matchCalled($method))) {
+            $accessorMethod = $parsedMethod->type();
+            $propertyName = $parsedMethod->propertyName();
+        } else {
+            $accessorMethod = null;
+            $propertyName = $method;
+        }
+
+        $nArgs = count($args);
+        $propertyValue = null;
+        $propertiesList = [];
+        $accessorMethodIsSetOrWith = in_array(
+            $accessorMethod,
+            [Method::TYPE_SET, Method::TYPE_WITH],
+            true
+        );
+
+        // Check if the call is multi-property accessor, that is if first
+        // argument is array and accessor method is set at this point and is "set", "with" or "unset"
+        if (
+            '' === $propertyName
+            && $nArgs > 0
+            && is_array(current($args))
+            && ($accessorMethodIsSetOrWith || Method::TYPE_UNSET === $accessorMethod)
+        ) {
+            if ($nArgs > 1) {
+                throw InvalidArgumentException::dueMultiPropertyAccessorCanHaveExactlyOneArgument(
+                    static::class,
+                    $method
+                );
+            }
+
+            /** @var mixed[] $propertiesList */
+            $propertiesList = array_shift($args);
+
+        } elseif (
+            // Check if whole method name is property name like $obj->somePropertyName('somevalue')
+            null === $accessorMethod
+            && null !== $this->properties->findConf($propertyName, true)
+            && $template->allowPropertyNameOnly()
+        ) {
+            // If there are zero arguments, then interpret the call as Getter
+            // If there are arguments, then it's Setter
+            if ($nArgs > 0) {
+                $accessorMethodIsSetOrWith = true;
+                $accessorMethod = Method::TYPE_SET;
+            } else {
+                $accessorMethod = Method::TYPE_GET;
+            }
+        }
+
+        // Accessor method must be resolved at this point, or we fail
+        if (null === $accessorMethod) {
+            throw BadMethodCallException::dueUnknownAccessorMethod(static::class, $method);
+        }
+
+        $propertyNameCI = false;
+
+        // If accessorProperties are not set at this point (thus not specified using array
+        // as first parameter to set or with), then extract them as separate arguments to current method
+        if (0 === count($propertiesList)) {
+            if ('' === $propertyName) {
+                if (!count($args)) {
+                    throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument(static::class, $method);
+                }
+
+                $propertyName = array_shift($args);
+
+                if (!is_string($propertyName)) {
+                    throw InvalidArgumentException::duePropertyNameArgumentMustBeString(
+                        static::class,
+                        $method,
+                        count($args) + 1
+                    );
+                }
+                /** @var string $propertyName */
+            } else {
+                // If we arrive here, then property name was specified partially or fully in method name and
+                // in this case we always interpret it as case-insensitive
+                $propertyNameCI = true;
+            }
+
+            if ($accessorMethodIsSetOrWith) {
+                if (!count($args)) {
+                    throw InvalidArgumentException::dueMethodIsMissingPropertyValueArgument(
+                        static::class,
+                        $method,
+                        $nArgs + 1
+                    );
+                }
+
+                $propertyValue = array_shift($args);
+            }
+
+            // Fail if there are more arguments specified than we are willing to process
+            if (count($args)) {
+                throw InvalidArgumentException::dueMethodHasMoreArgumentsThanExpected(
+                    static::class,
+                    $method,
+                    $nArgs - count($args)
+                );
+            }
+
+            if ($accessorMethodIsSetOrWith) {
+                $propertiesList[$propertyName] = $propertyValue;
+            } else {
+                $propertiesList[] = $propertyName;
+            }
+        }
+
+        $result = $object;
+
+        // Call Set or With
+        if ($accessorMethodIsSetOrWith) {
+            if (Method::TYPE_WITH === $accessorMethod) {
+                $result = clone $result;
+            }
+
+            $accessorImpl = $this->setter;
+
+            foreach ($propertiesList as $propertyName => $propertyValue) {
+                if (!is_string($propertyName)) {
+                    throw InvalidArgumentException::dueMultiPropertyArrayContainsNonStringProperty(
+                        static::class,
+                        $method,
+                        $propertyName
+                    );
+                }
+
+                $propertyConf = $this->properties->findConf($propertyName, $propertyNameCI);
+                $immutable = ($propertyConf?->isImmutable()) ?? false;
+
+                // Check if mutable/immutable property was called using correct method:
+                //  - mutable properties must be accessed using "set"
+                //  - immutable properties must be accessed using "with"
+                if (
+                    ($immutable === true && Method::TYPE_SET === $accessorMethod)
+                    || ($immutable === false && Method::TYPE_WITH === $accessorMethod)
+                ) {
+                    if ($immutable) {
+                        throw BadMethodCallException::dueImmutablePropertiesMustBeCalledUsingWith(
+                            static::class,
+                            $propertyName
+                        );
+                    } else {
+                        throw BadMethodCallException::dueMutablePropertiesMustBeCalledUsingSet(
+                            static::class,
+                            $propertyName
+                        );
+                    }
+                }
+
+                $result = $accessorImpl($result, $accessorMethod, $propertyName, $propertyValue, $propertyConf);
+            }
+        } else {
+            /** @var 'get'|'isset'|'unset' $accessorMethod */
+            $accessorImpl = match ($accessorMethod) {
+                Method::TYPE_GET    => $this->getter,
+                Method::TYPE_ISSET  => $this->isSetter,
+                Method::TYPE_UNSET  => $this->unSetter
+            };
+
+            foreach ($propertiesList as $propertyName) {
+                if (!is_string($propertyName)) {
+                    throw InvalidArgumentException::dueMultiPropertyArrayContainsNonStringProperty(
+                        static::class,
+                        $method,
+                        $propertyName
+                    );
+                }
+
+                $propertyConf = $this->properties->findConf($propertyName, $propertyNameCI);
+                $result = $accessorImpl($result, $propertyName, $propertyConf);
+            }
+        }
+
+        return $result;
     }
 
-    public function getGetter(): Closure
+    public function handleMagicGet(object $object, string $propertyName): mixed
     {
-        return $this->getter;
+        return ($this->getter)(
+            $object,
+            $propertyName,
+            $this->properties->findConf($propertyName)
+        );
     }
 
-    public function getSetter(): Closure
+    public function handleMagicIsset(object $object, string $propertyName): bool
     {
-        return $this->setter;
+        return ($this->isSetter)(
+            $object,
+            $propertyName,
+            $this->properties->findConf($propertyName)
+        );
     }
 
-    public function getIsSetter(): Closure
+    public function handleMagicSet(object $object, string $propertyName, mixed $propertyValue): void
     {
-        return $this->isSetter;
+        $propertyConf = $this->properties->findConf($propertyName);
+        $immutable = $propertyConf?->isImmutable();
+
+        if ($immutable) {
+            throw BadMethodCallException::dueImmutablePropertiesCantBeSetUsingAssignmentOperator(
+                $this->name,
+                $propertyName
+            );
+        }
+
+        ($this->setter)(
+            $object,
+            'set',
+            $propertyName,
+            $propertyValue,
+            $propertyConf
+        );
     }
 
-    public function getUnSetter(): Closure
+    public function handleMagicUnset(object $object, string $propertyName): void
     {
-        return $this->unSetter;
+        ($this->unSetter)(
+            $object,
+            $propertyName,
+            $this->properties->findConf($propertyName)
+        );
     }
 }

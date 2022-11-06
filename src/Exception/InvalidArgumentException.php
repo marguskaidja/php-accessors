@@ -12,6 +12,9 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Exception;
 
+use margusk\Accessors\Accessible;
+use margusk\Accessors\Template\Contract;
+
 use function gettype;
 use function implode;
 use function is_array;
@@ -34,6 +37,31 @@ final class InvalidArgumentException extends \InvalidArgumentException
                 (is_array($callable) ? implode('::', $callable) : $callable),
                 $class,
                 $property
+            )
+        );
+    }
+
+    public static function dueClassAttributeCanOccurOnceOnTopOfHierarchy(string $parentClass, string $childClass, string $attribute): self
+    {
+        return new self(
+            sprintf(
+                'Attribute "%s" can be used only once in hierarchy and with the first class using "%s" trait, which is "%s". ' .
+                'Declaring it in child class "%s" is not allowed.',
+                $attribute,
+                Accessible::class,
+                $parentClass,
+                $childClass
+            )
+        );
+    }
+
+    public static function dueTemplateMustImplementValidContract(string $template): self
+    {
+        return new self(
+            sprintf(
+                'Template "%s" must implement interface "%s"',
+                $template,
+                Contract::class
             )
         );
     }
