@@ -21,6 +21,9 @@ use function htmlspecialchars;
 
 /**
  * @property string $parentProperty
+ *
+ * @method string getParentProperty()
+ * @method self setParentProperty(string $value)
  */
 class ParentTestClassWithPropertyAttributes
 {

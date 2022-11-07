@@ -39,6 +39,7 @@ class Properties
     /**
      * @param  ReflectionClass<object>  $rfClass
      * @param  Attributes               $classAttributes
+     * @param  Properties|null          $parentProperties
      *
      * @return self
      */
@@ -119,7 +120,9 @@ class Properties
                 $p = $parentProperties->findConf($name);
             }
 
-            $that->propertiesByLowerCase[$nameLowerCase] = ($that->properties[$name] = $p);
+            if (null !== $p) {
+                $that->propertiesByLowerCase[$nameLowerCase] = ($that->properties[$name] = $p);
+            }
         }
 
         return $that;
