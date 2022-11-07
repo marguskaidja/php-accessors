@@ -18,6 +18,20 @@ use function implode;
 use function preg_match;
 use function strtolower;
 
+/**
+ * Default implementation for accessors Template.
+ *
+ * 1. Detects accessor calls and endpoints with following format:
+ *      - Setters: `set[<property>]()` and `with[<property>]()`
+ *      - Getters: `get[<property>]()` and `isset[<property>]()`
+ *      - Unsetter: `unset[<property>]()`
+ *
+ * 2. Allows accessor methods without property names, e.g. following calls are valid:
+ * ```php
+ *  $value = $foo->bar();       // Same as $value = $foo->bar;
+ *  $foo->bar('new value');    // Same as $foo->bar = `new value`;
+ * ```
+ */
 class Standard implements TemplateContract
 {
     public function matchEndpointCandidate(string $method): ?Method
