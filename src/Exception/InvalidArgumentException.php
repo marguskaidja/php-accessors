@@ -13,7 +13,7 @@ declare(strict_types=1);
 namespace margusk\Accessors\Exception;
 
 use margusk\Accessors\Accessible;
-use margusk\Accessors\Template\Contract;
+use margusk\Accessors\Format\Contract;
 
 use function gettype;
 use function implode;
@@ -59,12 +59,12 @@ final class InvalidArgumentException extends \InvalidArgumentException
         );
     }
 
-    public static function dueTemplateMustImplementValidContract(string $template): self
+    public static function dueFormatClassMustImplementValidContract(string $format): self
     {
         return new self(
             sprintf(
-                'Template "%s" must implement interface "%s"',
-                $template,
+                'Format "%s" must implement interface "%s"',
+                $format,
                 Contract::class
             )
         );

@@ -13,11 +13,11 @@ declare(strict_types=1);
 namespace margusk\Accessors;
 
 use Closure;
-use margusk\Accessors\Attr\{Immutable, Template};
+use margusk\Accessors\Attr\{Immutable, Format};
 use margusk\Accessors\Exception\BadMethodCallException;
 use margusk\Accessors\Exception\InvalidArgumentException;
-use margusk\Accessors\Template\Method;
-use margusk\Accessors\Template\Standard;
+use margusk\Accessors\Format\Method;
+use margusk\Accessors\Format\Standard;
 use ReflectionClass;
 use ReflectionException;
 
@@ -98,8 +98,8 @@ final class ClassConf
                 /** @var ClassConf $parent */
                 $parent = $this->parent;
 
-                /* Verify that child doesn't declare #[Immutable] and #[Template] */
-                foreach ([Immutable::class, Template::class] as $n) {
+                /* Verify that child doesn't declare #[Immutable] and #[Format] */
+                foreach ([Immutable::class, Format::class] as $n) {
                     if (null !== $this->attributes->get($n)) {
                         /* Find out the top of hierarchy */
                         while ($parent->parent && $parent->parent->isAccessible) {
@@ -118,11 +118,11 @@ final class ClassConf
             } else {
                 /**
                  * Since this is the top of the hierachy using "Accessible" trait, assign default instance
-                 * for #[Template] attribute if it's not custom defined.
+                 * for #[Format] attribute if it's not custom defined.
                  */
                 $this->attributes->setIfNull(
-                    Template::class,
-                    new Template(Standard::class)
+                    Format::class,
+                    new Format(Standard::class)
                 );
             }
 
@@ -297,11 +297,11 @@ final class ClassConf
      */
     public function handleMagicCall(object $object, string $method, array $args): mixed
     {
-        /** @var Template $attr */
-        $attr = $this->attributes->get(Template::class);
-        $template = $attr->instance();
+        /** @var Format $attr */
+        $attr = $this->attributes->get(Format::class);
+        $format = $attr->instance();
 
-        if (null !== ($parsedMethod = $template->matchCalled($method))) {
+        if (null !== ($parsedMethod = $format->matchCalled($method))) {
             $accessorMethod = $parsedMethod->type();
             $propertyName = $parsedMethod->propertyName();
         } else {
@@ -339,7 +339,7 @@ final class ClassConf
             // Check if whole method name is property name like $obj->somePropertyName('somevalue')
             null === $accessorMethod
             && null !== $this->properties->findConf($propertyName, true)
-            && $template->allowPropertyNameOnly()
+            && $format->allowPropertyNameOnly()
         ) {
             // If there are zero arguments, then interpret the call as Getter
             // If there are arguments, then it's Setter

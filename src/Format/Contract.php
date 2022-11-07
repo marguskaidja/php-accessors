@@ -10,7 +10,7 @@
 
 declare(strict_types=1);
 
-namespace margusk\Accessors\Template;
+namespace margusk\Accessors\Format;
 
 /** @api */
 interface Contract

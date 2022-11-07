@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\Accessors;
 
-use margusk\Accessors\Attr\Template;
+use margusk\Accessors\Attr\Format;
 use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocTagNode;
 use PHPStan\PhpDocParser\Ast\PhpDoc\PropertyTagValueNode;
 use PHPStan\PhpDocParser\Lexer\Lexer;
@@ -49,9 +49,9 @@ class Properties
         /* Learn from DocBlock comments which properties should be exposed and how (read-only,write-only or both) */
         $docBlockAttributes = $that->parseDocBlock($rfClass);
 
-        /** @var Template $attr */
-        $attr = $classAttributes->get(Template::class);
-        $template = $attr->instance();
+        /** @var Format $attr */
+        $attr = $classAttributes->get(Format::class);
+        $format = $attr->instance();
 
         /**
          * Collect all manually generated accessor endpoints.
@@ -69,7 +69,7 @@ class Properties
                 continue;
             }
 
-            if (null !== ($parsedMethod = $template->matchEndpointCandidate($rfMethod->name))) {
+            if (null !== ($parsedMethod = $format->matchEndpointCandidate($rfMethod->name))) {
                 $n = strtolower($parsedMethod->propertyName());
                 $t = $parsedMethod->type();
                 $accessorEndpoints[$n][$t] = $rfMethod->name;

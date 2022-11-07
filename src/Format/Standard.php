@@ -10,16 +10,16 @@
 
 declare(strict_types=1);
 
-namespace margusk\Accessors\Template;
+namespace margusk\Accessors\Format;
 
-use margusk\Accessors\Template\Contract as TemplateContract;
+use margusk\Accessors\Format\Contract as FormatContract;
 
 use function implode;
 use function preg_match;
 use function strtolower;
 
 /**
- * Default implementation for accessors Template.
+ * Default camel-case format for accessors method names.
  *
  * 1. Detects accessor calls and endpoints with following format:
  *      - Setters: `set[<property>]()` and `with[<property>]()`
@@ -32,7 +32,7 @@ use function strtolower;
  *  $foo->bar('new value');    // Same as $foo->bar = `new value`;
  * ```
  */
-class Standard implements TemplateContract
+class Standard implements FormatContract
 {
     public function matchEndpointCandidate(string $method): ?Method
     {

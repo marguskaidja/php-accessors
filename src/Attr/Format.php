@@ -15,30 +15,30 @@ namespace margusk\Accessors\Attr;
 use Attribute;
 use margusk\Accessors\Attr;
 use margusk\Accessors\Exception\InvalidArgumentException;
-use margusk\Accessors\Template\Contract as TemplateContract;
+use margusk\Accessors\Format\Contract as FormatContract;
 
 use function is_subclass_of;
 
 /** @api */
 #[Attribute(Attribute::TARGET_CLASS)]
-class Template extends Attr
+class Format extends Attr
 {
     /** @var mixed[] */
     private array $ctorArgs;
 
-    /** @var TemplateContract|null */
-    private ?TemplateContract $instance = null;
+    /** @var FormatContract|null */
+    private ?FormatContract $instance = null;
 
     /**
-     * @param  class-string<TemplateContract>  $template
-     * @param  mixed[]                         ...$ctorArgs
+     * @param  class-string<FormatContract> $format
+     * @param  mixed[]                      ...$ctorArgs
      */
     public function __construct(
-        private string $template,
+        private string $format,
         mixed ...$ctorArgs
     ) {
-        if (!is_subclass_of($template, TemplateContract::class)) {
-            throw InvalidArgumentException::dueTemplateMustImplementValidContract($template);
+        if (!is_subclass_of($format, FormatContract::class)) {
+            throw InvalidArgumentException::dueFormatClassMustImplementValidContract($format);
         }
 
         parent::__construct();
@@ -47,12 +47,12 @@ class Template extends Attr
     }
 
     /**
-     * @return TemplateContract
+     * @return FormatContract
      */
-    public function instance(): TemplateContract
+    public function instance(): FormatContract
     {
         if (null === $this->instance) {
-            $this->instance = new $this->template(...$this->ctorArgs);
+            $this->instance = new $this->format(...$this->ctorArgs);
         }
 
         return $this->instance;
