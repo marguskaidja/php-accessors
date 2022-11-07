@@ -19,6 +19,7 @@ use margusk\Accessors\Template\Contract as TemplateContract;
 
 use function is_subclass_of;
 
+/** @api */
 #[Attribute(Attribute::TARGET_CLASS)]
 class Template extends Attr
 {

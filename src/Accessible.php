@@ -14,6 +14,7 @@ namespace margusk\Accessors;
 
 use ReflectionException;
 
+/** @api */
 trait Accessible
 {
     /**

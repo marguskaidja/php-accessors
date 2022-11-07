@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Template;
 
+/** @api */
 interface Contract
 {
     /**
