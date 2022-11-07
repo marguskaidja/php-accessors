@@ -29,8 +29,8 @@ class Template extends Attr
     private ?TemplateContract $instance = null;
 
     /**
-     * @param class-string<TemplateContract>  $template
-     * @param mixed[] ...$ctorArgs
+     * @param  class-string<TemplateContract>  $template
+     * @param  mixed[]                         ...$ctorArgs
      */
     public function __construct(
         private string $template,

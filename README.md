@@ -27,7 +27,7 @@ Current library can create automatic accessors (e.g. _getters_ and _setters_) fo
 ## Requirements
 
 PHP >= 8.0
-~~~~
+
 ## Installation
 
 Install with composer:
@@ -69,6 +69,7 @@ echo $a->getFoo();  // Outputs "foo"
 echo $a->getBar();  // Outputs "bar"
 echo $a->getBaz();  // Outputs "baz"
 ```
+
 This has boilerplate code just to make 3 properties readable. In case there are tens of properties things could get quite tedious.
 
 By using `Accessible` trait this class can be rewritten:

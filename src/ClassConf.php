@@ -16,7 +16,6 @@ use Closure;
 use margusk\Accessors\Attr\{Immutable, Template};
 use margusk\Accessors\Exception\BadMethodCallException;
 use margusk\Accessors\Exception\InvalidArgumentException;
-use margusk\Accessors\Template\Contract as TemplateContract;
 use margusk\Accessors\Template\Method;
 use margusk\Accessors\Template\Standard;
 use ReflectionClass;
@@ -29,10 +28,6 @@ use function current;
 use function get_parent_class;
 use function in_array;
 use function is_string;
-use function sprintf;
-use function strlen;
-use function strtolower;
-use function substr;
 
 final class ClassConf
 {
@@ -78,9 +73,11 @@ final class ClassConf
         $parentName = get_parent_class($this->name);
 
         $this->parent = (
-            false !== $parentName ?
-                self::factory($parentName) :
-                null
+        false !== $parentName
+            ?
+            self::factory($parentName)
+            :
+            null
         );
 
         /* Check if parent class or current contains 'Accessible' trait */
@@ -140,6 +137,25 @@ final class ClassConf
             $this->attributes = new Attributes();
             $this->properties = new Properties();
         }
+    }
+
+    /**
+     * Parses configuration of specified class.
+     *
+     * Configuration is cached so later requests for same class are returned instantly.
+     *
+     * @param  class-string  $name  Class name to create configuration for
+     *
+     * @return ClassConf
+     * @throws ReflectionException
+     */
+    public static function factory(string $name): ClassConf
+    {
+        if (!isset(self::$classes[$name])) {
+            self::$classes[$name] = new self($name);
+        }
+
+        return self::$classes[$name];
     }
 
     private function createGetter(): Closure
@@ -273,25 +289,6 @@ final class ClassConf
     }
 
     /**
-     * Parses configuration of specified class.
-     *
-     * Configuration is cached so later requests for same class are returned instantly.
-     *
-     * @param  class-string  $name  Class name to create configuration for
-     *
-     * @return ClassConf
-     * @throws ReflectionException
-     */
-    public static function factory(string $name): ClassConf
-    {
-        if (!isset(self::$classes[$name])) {
-            self::$classes[$name] = new self($name);
-        }
-
-        return self::$classes[$name];
-    }
-
-    /**
      * @param  string   $method
      * @param  mixed[]  $args
      * @param  object   $object
@@ -331,14 +328,13 @@ final class ClassConf
         ) {
             if ($nArgs > 1) {
                 throw InvalidArgumentException::dueMultiPropertyAccessorCanHaveExactlyOneArgument(
-                    static::class,
+                    self::class,
                     $method
                 );
             }
 
             /** @var mixed[] $propertiesList */
             $propertiesList = array_shift($args);
-
         } elseif (
             // Check if whole method name is property name like $obj->somePropertyName('somevalue')
             null === $accessorMethod
@@ -357,7 +353,7 @@ final class ClassConf
 
         // Accessor method must be resolved at this point, or we fail
         if (null === $accessorMethod) {
-            throw BadMethodCallException::dueUnknownAccessorMethod(static::class, $method);
+            throw BadMethodCallException::dueUnknownAccessorMethod(self::class, $method);
         }
 
         $propertyNameCI = false;
@@ -367,14 +363,14 @@ final class ClassConf
         if (0 === count($propertiesList)) {
             if ('' === $propertyName) {
                 if (!count($args)) {
-                    throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument(static::class, $method);
+                    throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument(self::class, $method);
                 }
 
                 $propertyName = array_shift($args);
 
                 if (!is_string($propertyName)) {
                     throw InvalidArgumentException::duePropertyNameArgumentMustBeString(
-                        static::class,
+                        self::class,
                         $method,
                         count($args) + 1
                     );
@@ -389,7 +385,7 @@ final class ClassConf
             if ($accessorMethodIsSetOrWith) {
                 if (!count($args)) {
                     throw InvalidArgumentException::dueMethodIsMissingPropertyValueArgument(
-                        static::class,
+                        self::class,
                         $method,
                         $nArgs + 1
                     );
@@ -401,7 +397,7 @@ final class ClassConf
             // Fail if there are more arguments specified than we are willing to process
             if (count($args)) {
                 throw InvalidArgumentException::dueMethodHasMoreArgumentsThanExpected(
-                    static::class,
+                    self::class,
                     $method,
                     $nArgs - count($args)
                 );
@@ -427,7 +423,7 @@ final class ClassConf
             foreach ($propertiesList as $propertyName => $propertyValue) {
                 if (!is_string($propertyName)) {
                     throw InvalidArgumentException::dueMultiPropertyArrayContainsNonStringProperty(
-                        static::class,
+                        self::class,
                         $method,
                         $propertyName
                     );
@@ -445,12 +441,12 @@ final class ClassConf
                 ) {
                     if ($immutable) {
                         throw BadMethodCallException::dueImmutablePropertiesMustBeCalledUsingWith(
-                            static::class,
+                            self::class,
                             $propertyName
                         );
                     } else {
                         throw BadMethodCallException::dueMutablePropertiesMustBeCalledUsingSet(
-                            static::class,
+                            self::class,
                             $propertyName
                         );
                     }
@@ -461,15 +457,15 @@ final class ClassConf
         } else {
             /** @var 'get'|'isset'|'unset' $accessorMethod */
             $accessorImpl = match ($accessorMethod) {
-                Method::TYPE_GET    => $this->getter,
-                Method::TYPE_ISSET  => $this->isSetter,
-                Method::TYPE_UNSET  => $this->unSetter
+                Method::TYPE_GET => $this->getter,
+                Method::TYPE_ISSET => $this->isSetter,
+                Method::TYPE_UNSET => $this->unSetter
             };
 
             foreach ($propertiesList as $propertyName) {
                 if (!is_string($propertyName)) {
                     throw InvalidArgumentException::dueMultiPropertyArrayContainsNonStringProperty(
-                        static::class,
+                        self::class,
                         $method,
                         $propertyName
                     );

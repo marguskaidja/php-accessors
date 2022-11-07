@@ -43,42 +43,6 @@ class Attributes
         $this->attributes = array_fill_keys(self::AVAILABLE_ATTR_NAMES, null);
     }
 
-    public function mergeWithParent(Attributes $parent): static
-    {
-        $new = clone $this;
-
-        foreach (self::AVAILABLE_ATTR_NAMES as $n) {
-            if (null === $new->attributes[$n]) {
-                $new->attributes[$n] = $parent->attributes[$n];
-            }
-        }
-
-        return $new;
-    }
-
-    public function get(string $name): ?Attr
-    {
-        return $this->attributes[$name] ?? null;
-    }
-
-    /**
-     * @param  class-string $name
-     * @param  Attr         $attr
-     *
-     * @return $this
-     */
-    public function setIfNull(string $name, Attr $attr): self
-    {
-        if (
-            true === array_key_exists($name, $this->attributes)
-            && null === $this->attributes[$name]
-        ) {
-            $this->attributes[$name] = $attr;
-        }
-
-        return $this;
-    }
-
     /**
      * @param  ReflectionClass<object>|ReflectionProperty  $rfObject
      *
@@ -109,7 +73,7 @@ class Attributes
     public static function fromDocBlock(PhpDocTagNode $tagNode): ?self
     {
         /** @var array<class-string<Attr>> $found */
-        $found = match(strtolower($tagNode->name)) {
+        $found = match (strtolower($tagNode->name)) {
             '@property' => [Get::class, Set::class],
             '@property-read' => [Get::class],
             '@property-write' => [Set::class],
@@ -131,5 +95,41 @@ class Attributes
         }
 
         return $that;
+    }
+
+    public function mergeWithParent(Attributes $parent): static
+    {
+        $new = clone $this;
+
+        foreach (self::AVAILABLE_ATTR_NAMES as $n) {
+            if (null === $new->attributes[$n]) {
+                $new->attributes[$n] = $parent->attributes[$n];
+            }
+        }
+
+        return $new;
+    }
+
+    public function get(string $name): ?Attr
+    {
+        return $this->attributes[$name] ?? null;
+    }
+
+    /**
+     * @param  class-string  $name
+     * @param  Attr          $attr
+     *
+     * @return $this
+     */
+    public function setIfNull(string $name, Attr $attr): self
+    {
+        if (
+            true === array_key_exists($name, $this->attributes)
+            && null === $this->attributes[$name]
+        ) {
+            $this->attributes[$name] = $attr;
+        }
+
+        return $this;
     }
 }

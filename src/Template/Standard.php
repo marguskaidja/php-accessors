@@ -29,7 +29,7 @@ class Standard implements TemplateContract
     {
         if (
             preg_match(
-                '/^(' . implode('|', Method::TYPES) . ')(.*)/i',
+                '/^('.implode('|', Method::TYPES).')(.*)/i',
                 strtolower($method),
                 $matches
             )

@@ -23,8 +23,8 @@ use function sprintf;
 final class InvalidArgumentException extends \InvalidArgumentException
 {
     /**
-     * @param  string           $class
-     * @param  string           $property
+     * @param  string  $class
+     * @param  string  $property
      * @param  string|string[]  $callable
      *
      * @return static
@@ -41,11 +41,15 @@ final class InvalidArgumentException extends \InvalidArgumentException
         );
     }
 
-    public static function dueClassAttributeCanOccurOnceOnTopOfHierarchy(string $parentClass, string $childClass, string $attribute): self
-    {
+    public static function dueClassAttributeCanOccurOnceOnTopOfHierarchy(
+        string $parentClass,
+        string $childClass,
+        string $attribute
+    ): self {
         return new self(
             sprintf(
-                'Attribute "%s" can be used only once in hierarchy and with the first class using "%s" trait, which is "%s". ' .
+                'Attribute "%s" can be used only once in hierarchy and with the first class using "%s" trait, which is "%s". '
+                .
                 'Declaring it in child class "%s" is not allowed.',
                 $attribute,
                 Accessible::class,

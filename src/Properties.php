@@ -36,20 +36,11 @@ class Properties
     /** @var Property[] */
     private array $propertiesByLowerCase = [];
 
-    public function findConf(string $name, bool $caseInsensitiveSearch = false): ?Property
-    {
-        if ($caseInsensitiveSearch) {
-            $propertyConf = $this->propertiesByLowerCase[strtolower($name)] ?? null;
-        } else {
-            $propertyConf = $this->properties[$name] ?? null;
-        }
-
-        return $propertyConf;
-    }
-
     /**
      * @param  ReflectionClass<object>  $rfClass
      * @param  Attributes               $classAttributes
+     *
+     * @return self
      */
     public static function fromReflection(ReflectionClass $rfClass, Attributes $classAttributes): self
     {
@@ -158,8 +149,8 @@ class Properties
         foreach ($node->children as $childNode) {
             if ($childNode instanceof PhpDocTagNode
                 && $childNode->value instanceof PropertyTagValueNode
-                && str_starts_with($childNode->value->propertyName, '$')) {
-
+                && str_starts_with($childNode->value->propertyName, '$')
+            ) {
                 $attributes = Attributes::fromDocBlock($childNode);
 
                 if (null !== $attributes) {
@@ -169,5 +160,16 @@ class Properties
         }
 
         return $result;
+    }
+
+    public function findConf(string $name, bool $caseInsensitiveSearch = false): ?Property
+    {
+        if ($caseInsensitiveSearch) {
+            $propertyConf = $this->propertiesByLowerCase[strtolower($name)] ?? null;
+        } else {
+            $propertyConf = $this->properties[$name] ?? null;
+        }
+
+        return $propertyConf;
     }
 }
