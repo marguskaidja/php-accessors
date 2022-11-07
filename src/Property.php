@@ -170,8 +170,8 @@ class Property
         return $this->isUnsettable;
     }
 
-    public function accessorEndpoint(string $accessor): ?string
+    public function accessorEndpoint(string $accessorMethod): ?string
     {
-        return $this->accessorEndpoints[$accessor] ?? null;
+        return $this->accessorEndpoints[$accessorMethod] ?? null;
     }
 }

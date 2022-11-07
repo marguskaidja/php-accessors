@@ -23,6 +23,7 @@ use function is_string;
 use function preg_match;
 use function trim;
 
+/** @api */
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
 class Mutator extends Attr
 {

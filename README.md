@@ -8,7 +8,7 @@ Current library can create automatic accessors (e.g. _getters_ and _setters_) fo
     * direct assignment syntax:
         * `$value = $foo->property`
         * `$foo->property = 'value'`
-    * method syntax:
+    * method syntax (**customizable format**):
         * `$value = $foo->get('property')`
         * `$value = $foo->property()`
         * `$foo->property('value')`
@@ -20,14 +20,14 @@ Current library can create automatic accessors (e.g. _getters_ and _setters_) fo
     * Accessors can be configured _per_ property or for all class at once.
     * Inheritance and override support. E.g. set default behaviour for whole class and make exceptions for specific properties.
     * No variables, functions nor methods will be polluted into user classes or global namespace (except necessary `__get()`/`__set()`/`__isset()`/`__unset()`/`__call()`).
-    * [_PHPDoc_](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) tags `@property`, `@property-read` and `@property-write` are also supported and can be used instead of Attributes on basic cases.
+    * [_PHPDoc_](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) tags `@property`, `@property-read` and `@property-write` can be used instead of basic Attributes.
 * _Weak_ **immutability** support backed by _wither_ methods.
 * **Mutator** support for _setters_.
 
 ## Requirements
 
 PHP >= 8.0
-~~~~
+
 ## Installation
 
 Install with composer:
@@ -69,6 +69,7 @@ echo $a->getFoo();  // Outputs "foo"
 echo $a->getBar();  // Outputs "bar"
 echo $a->getBaz();  // Outputs "baz"
 ```
+
 This has boilerplate code just to make 3 properties readable. In case there are tens of properties things could get quite tedious.
 
 By using `Accessible` trait this class can be rewritten:
@@ -284,6 +285,7 @@ Notes:
     * Immutable properties can be still changed inside the owner object.
 * To prevent ambiguity, immutable properties must be changed using  method `with` instead of `set`. Using `set` for immutable properties results in exception and vice versa.
 * Unsetting immutable properties is not possible and results in exception.
+* When `#[Immutable]` is defined on a class then it must be done on top of hierarchy and not in somewhere between. This is to enforce consistency throughout all of the inheritance. This effectively prohibits situations when there's mutable parent but in derived class the same inherited properties can be turned suddenly immutable.
 
 ### Mutator
 
@@ -398,11 +400,11 @@ unset($a->bar);     // Results in Exception
 ```
 
 Notes:
-* since `Unset` is reserved word, `Delete` was chosen for attribute name instead.
+* since `Unset` is reserved word, `Delete` is used as Attribute name instead.
 
 ### Configuration inheritance
 
-Inheritance is quite straightforward. Attributes in parent class are inherited by children and can be overwritten (except for `Immutable`):
+Inheritance is quite straightforward. Attributes in parent class are inherited by children and can be overwritten (except `#[Immutable]` and `#[Format]`):
 
 ```php
 use margusk\Accessors\Attr\{
@@ -464,6 +466,61 @@ echo $a->FOO;               // Outputs "FOO"
 echo $a->Foo;               // Results in Exception because property "Foo" doesn't exist
 ```
 
+### Customizing format of accessor method names
+Usually the names for accessor methods are just straightforward _camel-case_'d names like `get<property>`, `set<property>` and so on. But if necessary, it can be customized.
+
+Customization can be achieved using `#[Format(class-string<FormatContract>)]` attribute with first parameter specifying class name. This class is responsible for parsing out accessor methods names. 
+
+Following example turns _camel-case_ methods into _snake-case_:
+
+```php
+use margusk\Accessors\Attr\{
+    Get, Set, Format
+};
+use margusk\Accessors\Format\Method;
+use margusk\Accessors\Format\Standard;
+use margusk\Accessors\Accessible;
+
+class SnakeCaseFmt extends Standard
+{
+    public function matchCalled(string $method): ?Method
+    {
+        if (
+            preg_match(
+                '/^(' . implode('|', Method::TYPES) . ')_(.*)/i',
+                strtolower($method),
+                $matches
+            )
+        ) {
+            $methodName = $matches[1];
+            $propertyName = $matches[2];
+
+            return new Method(
+                Method::TYPES[$methodName],
+                $propertyName
+            );
+        }
+
+        return null;
+    }
+}
+
+#[Get,Set,Format(SnakeCaseFmt::class)]
+class A
+{
+    use Accessible;
+
+    protected string $foo = "foo";
+}
+
+$a = new A();
+echo $a->set_foo("new foo")->get_foo();     // Outputs "new foo"
+echo $a->setFoo("new foo");                 // Results in Exception
+
+```
+Notes:
+* `#[Format(...)]` can be defined only for a class and on top of hierarchy. This is to enforce consistency throughout all of the inheritance tree. This effectively prohibits situations when there's one syntax in parent but in derived classes the syntax suddenly changes.
+
 ### IDE autocompletion
 
 Having accessors with _magic methods_ can bring the disadvantages of losing somewhat of IDE autocompletion and make static code analyzers grope in the dark.
@@ -512,9 +569,10 @@ Since `@property[<-read>|<-write>]` tags act also in exposing properties, you ge
        * if `string` type is used then it must contain regular function name or syntax `$this->someMutatorMethod` implies instance method.
        * use `array` type for specifying static class method.
        * and use `null` to discard any previously set mutator.
-   * `#[Immutable]`: turns an property or whole class immutable. Once the attribute is added, it can't be disabled later.
+   * `#[Immutable]`: turns an property or whole class immutable. When used on a class, then it must be defined on top of hierarchy. Once defined, it can't be disabled later.
+   * `#[Format(class-string<FormatContract>)]`: allows customization of accessor method names.
 
-### Properties can be accessed with following syntaxes:
+### Accessor methods:
 
 #### Reading properties:
 * `$value = $obj->foo;`

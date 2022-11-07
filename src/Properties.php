@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\Accessors;
 
+use margusk\Accessors\Attr\Format;
 use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocTagNode;
 use PHPStan\PhpDocParser\Ast\PhpDoc\PropertyTagValueNode;
 use PHPStan\PhpDocParser\Lexer\Lexer;
@@ -24,7 +25,6 @@ use ReflectionMethod;
 use ReflectionProperty;
 
 use function is_string;
-use function preg_match;
 use function strtolower;
 use function substr;
 
@@ -39,11 +39,19 @@ class Properties
     /**
      * @param  ReflectionClass<object>  $rfClass
      * @param  Attributes               $classAttributes
+     *
+     * @return self
      */
-    public function __construct(ReflectionClass $rfClass, Attributes $classAttributes)
+    public static function fromReflection(ReflectionClass $rfClass, Attributes $classAttributes): self
     {
+        $that = new self();
+
         /* Learn from DocBlock comments which properties should be exposed and how (read-only,write-only or both) */
-        $docBlockAttributes = $this->parseDocBlock($rfClass);
+        $docBlockAttributes = $that->parseDocBlock($rfClass);
+
+        /** @var Format $attr */
+        $attr = $classAttributes->get(Format::class);
+        $format = $attr->instance();
 
         /**
          * Collect all manually generated accessor endpoints.
@@ -57,14 +65,14 @@ class Properties
                 ReflectionMethod::IS_PROTECTED | ReflectionMethod::IS_PRIVATE | ReflectionMethod::IS_PUBLIC
             ) as $rfMethod
         ) {
-            if (!$rfMethod->isStatic()
-                && preg_match(
-                    '/^(set|get|isset|unset|with)(.+)/',
-                    strtolower($rfMethod->name),
-                    $matches
-                )
-            ) {
-                $accessorEndpoints[(string)$matches[2]][(string)$matches[1]] = $rfMethod->name;
+            if ($rfMethod->isStatic()) {
+                continue;
+            }
+
+            if (null !== ($parsedMethod = $format->matchEndpointCandidate($rfMethod->name))) {
+                $n = strtolower($parsedMethod->propertyName());
+                $t = $parsedMethod->type();
+                $accessorEndpoints[$n][$t] = $rfMethod->name;
             }
         }
 
@@ -97,19 +105,10 @@ class Properties
                 ($accessorEndpoints[$nameLowerCase] ?? [])
             );
 
-            $this->propertiesByLowerCase[$nameLowerCase] = ($this->properties[$name] = $p);
-        }
-    }
-
-    public function findConf(string $name, bool $caseInsensitiveSearch = false): ?Property
-    {
-        if ($caseInsensitiveSearch) {
-            $propertyConf = $this->propertiesByLowerCase[strtolower($name)] ?? null;
-        } else {
-            $propertyConf = $this->properties[$name] ?? null;
+            $that->propertiesByLowerCase[$nameLowerCase] = ($that->properties[$name] = $p);
         }
 
-        return $propertyConf;
+        return $that;
     }
 
     /**
@@ -150,8 +149,8 @@ class Properties
         foreach ($node->children as $childNode) {
             if ($childNode instanceof PhpDocTagNode
                 && $childNode->value instanceof PropertyTagValueNode
-                && str_starts_with($childNode->value->propertyName, '$')) {
-
+                && str_starts_with($childNode->value->propertyName, '$')
+            ) {
                 $attributes = Attributes::fromDocBlock($childNode);
 
                 if (null !== $attributes) {
@@ -161,5 +160,16 @@ class Properties
         }
 
         return $result;
+    }
+
+    public function findConf(string $name, bool $caseInsensitiveSearch = false): ?Property
+    {
+        if ($caseInsensitiveSearch) {
+            $propertyConf = $this->propertiesByLowerCase[strtolower($name)] ?? null;
+        } else {
+            $propertyConf = $this->properties[$name] ?? null;
+        }
+
+        return $propertyConf;
     }
 }

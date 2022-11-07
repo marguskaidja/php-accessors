@@ -15,6 +15,7 @@ namespace margusk\Accessors\Attr;
 use Attribute;
 use margusk\Accessors\Attr;
 
+/** @api */
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
 class Get extends Attr
 {
