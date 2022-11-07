@@ -39,10 +39,15 @@ class Properties
     /**
      * @param  ReflectionClass<object>  $rfClass
      * @param  Attributes               $classAttributes
+     * @param  Properties|null          $parentProperties
      *
      * @return self
      */
-    public static function fromReflection(ReflectionClass $rfClass, Attributes $classAttributes): self
+    public static function fromReflection(
+        ReflectionClass $rfClass,
+        Attributes $classAttributes,
+        ?Properties $parentProperties
+    ): self
     {
         $that = new self();
 
@@ -62,10 +67,13 @@ class Properties
 
         foreach (
             $rfClass->getMethods(
-                ReflectionMethod::IS_PROTECTED | ReflectionMethod::IS_PRIVATE | ReflectionMethod::IS_PUBLIC
+                ReflectionMethod::IS_PROTECTED | ReflectionMethod::IS_PUBLIC
             ) as $rfMethod
         ) {
-            if ($rfMethod->isStatic()) {
+            if (
+                $rfMethod->isStatic()
+                || $rfClass->name !== $rfMethod->getDeclaringClass()->name
+            ) {
                 continue;
             }
 
@@ -87,25 +95,34 @@ class Properties
          */
         foreach (
             $rfClass->getProperties(
-                ReflectionProperty::IS_PRIVATE | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PUBLIC
+                ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PUBLIC
             ) as $rfProperty
         ) {
             $name = $rfProperty->getName();
             $nameLowerCase = strtolower($name);
 
-            if (isset($docBlockAttributes[$name])) {
-                $attributes = $docBlockAttributes[$name]->mergeWithParent($classAttributes);
+            if (
+                null === $parentProperties
+                || $rfClass->name === $rfProperty->getDeclaringClass()->name
+            ) {
+                if (isset($docBlockAttributes[$name])) {
+                    $attributes = $docBlockAttributes[$name]->mergeWithParent($classAttributes);
+                } else {
+                    $attributes = $classAttributes;
+                }
+
+                $p = new Property(
+                    $rfProperty,
+                    $attributes,
+                    ($accessorEndpoints[$nameLowerCase] ?? [])
+                );
             } else {
-                $attributes = $classAttributes;
+                $p = $parentProperties->findConf($name);
             }
 
-            $p = new Property(
-                $rfProperty,
-                $attributes,
-                ($accessorEndpoints[$nameLowerCase] ?? [])
-            );
-
-            $that->propertiesByLowerCase[$nameLowerCase] = ($that->properties[$name] = $p);
+            if (null !== $p) {
+                $that->propertiesByLowerCase[$nameLowerCase] = ($that->properties[$name] = $p);
+            }
         }
 
         return $that;

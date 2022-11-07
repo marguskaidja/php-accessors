@@ -115,6 +115,7 @@ final class ClassConf
                 }
 
                 $this->attributes = $this->attributes->mergeWithParent($parent->attributes);
+                $parentProperties = $parent->properties;
             } else {
                 /**
                  * Since this is the top of the hierachy using "Accessible" trait, assign default instance
@@ -124,9 +125,11 @@ final class ClassConf
                     Format::class,
                     new Format(Standard::class)
                 );
+
+                $parentProperties = null;
             }
 
-            $this->properties = Properties::fromReflection($rfClass, $this->attributes);
+            $this->properties = Properties::fromReflection($rfClass, $this->attributes, $parentProperties);
 
             $this->getter = $this->createGetter();
             $this->setter = $this->createSetter();

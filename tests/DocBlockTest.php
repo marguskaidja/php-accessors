@@ -102,4 +102,19 @@ class DocBlockTest extends TestCase
          */
         $obj->p1;
     }
+
+    public function test_tag_in_parent_class_must_be_inherited(): void
+    {
+        $obj = new class extends ParentTestClassWithPropertyAttributes {
+        };
+
+        $expectedValue = 'new value';
+        $obj->setParentProperty($expectedValue);
+
+        $this->assertEquals(
+            $expectedValue,
+            $obj->getParentProperty()
+        );
+    }
+
 }

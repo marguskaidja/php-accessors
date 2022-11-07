@@ -1,7 +1,7 @@
 [![Tests](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml/badge.svg)](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml)
 # Accessors
 
-Current library can create automatic accessors (e.g. _getters_ and _setters_) for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class, which will then handle situations, where _inaccessible_ (`private`/`protected`) property is accessed.
+Current library can create automatic accessors (e.g. _getters_ and _setters_) for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class, which will then handle situations, where _inaccessible_ (aka `protected`) property is accessed.
 
 #### Features
 * Multiple accessor **syntaxes**:
@@ -361,11 +361,12 @@ The 2 endpoints (`getFoo`/`setFoo`) will be called in every situation:
 * either when property is accessed with direct assignment syntax (e.g. `$a->foo`)
 * or when property is accessed with method syntax (e.g. `$a->getFoo()`)
     * if the visibility of endpoint is `public`, then it's naturally called by PHP engine.
-    * if it's `private`/`protected`, then it goes through `__call` magic method provided by `Accessible` trait.
+    * if it's `protected`, then it goes through `__call` magic method provided by `Accessible` trait.
 
 Notes:
 * Endpoint methods must start with string `set`, `get`, `isset`, `unset` or `with` and followed with property name.
 * Only instance methods are detected, `static` methods wont work.
+* Only `public` or `protected` methods are detected, `private` methods wont work.
 * _mutator_ is bypassed and should be done inside the setter endpoint itself.
 * Return values from endpoints are handled as following. Values from:
     * `get` and `isset` are handed over to caller.
@@ -571,6 +572,9 @@ Since `@property[<-read>|<-write>]` tags act also in exposing properties, you ge
        * and use `null` to discard any previously set mutator.
    * `#[Immutable]`: turns an property or whole class immutable. When used on a class, then it must be defined on top of hierarchy. Once defined, it can't be disabled later.
    * `#[Format(class-string<FormatContract>)]`: allows customization of accessor method names.
+
+Notes:
+* Only `protected` properties are supported. Due current library's implementation, `private` properties may introduce unexpected behaviour and anomalies in inheritance chain and are disregarded this time.
 
 ### Accessor methods:
 
