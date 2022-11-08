@@ -18,143 +18,225 @@ use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Attr\Immutable;
 use margusk\Accessors\Exception\InvalidArgumentException;
 
+use function assert;
+
 class UnsetTest extends TestCase
 {
-    public function test_unset_langconstruct_should_uninitialize_property(): void
+    public function testUnsetUsingVariousSyntaxesMustUninitializeProperty(): void
     {
-        $obj = new class {
-            use Accessible;
+        // Preparations
+        $objects = [];
 
-            #[Get, Delete]
-            protected string $p1 = 'initial value';
+        for ($c = 0; $c < 4; $c++) {
+            $objects[$c] = $this->defaultTestObject();
 
-            public function issetP1(): bool
-            {
-                return isset($this->p1);
-            }
-        };
+            $this->assertEquals(
+                true,
+                /** @phpstan-ignore-next-line */
+                $objects[$c]->issetFoo()
+            );
 
-        unset($obj->p1);
-        $this->assertEquals(false, $obj->issetP1());
-        $this->assertEquals(false, isset($obj->p1));
+            $this->assertEquals(
+                true,
+                isset($objects[$c]->foo)
+            );
+        }
+
+        // Safety check, all objects must be unique
+        assert($objects[0] !== $objects[1]);
+        assert($objects[1] !== $objects[2]);
+        assert($objects[2] !== $objects[3]);
+
+        // Unset $foo in each of the 4 objects using different syntax
+        unset($objects[0]->foo);
+        /** @phpstan-ignore-next-line */
+        $objects[1]->unsetFoo();
+        /** @phpstan-ignore-next-line */
+        $objects[2]->unset(['foo']);
+        /** @phpstan-ignore-next-line */
+        $objects[3]->unset('foo');
+
+        // Verify that all $foo-s were unset
+        for ($c = 0; $c < 4; $c++) {
+            $this->assertEquals(
+                false,
+                /** @phpstan-ignore-next-line */
+                $objects[$c]->issetFoo()
+            );
+
+            $this->assertEquals(
+                false,
+                isset($objects[$c]->foo)
+            );
+        }
     }
 
-    public function test_unset_langconstruct_should_fail_protected_property(): void
+    /**
+     * Returns object where:
+     *  $public is PUBLIC property
+     *  $foo is DELETABLE and is INITIALIZED
+     *  $bar is NOT DELETABLE and is INITIALIZED
+     *  $baz must be left UNDECLARED
+     *  $uninitialized is DELETABLE and is UNINITIALIZED
+     *
+     * @return object
+     */
+    protected function defaultTestObject(): object
     {
-        $obj = new class {
+        return new #[Get, Delete] class {
             use Accessible;
 
-            protected string $p1 = 'initial value';
+            public string $public = 'public';
 
-            public function issetP1(): bool
-            {
-                return isset($this->p1);
-            }
+            protected string $foo = 'foo';
+
+            #[Delete(false)]
+            protected string $bar = 'bar';
+
+            #[Immutable]
+            protected string $immutable = 'immutable';
+
+            protected string $uninitialized;
         };
+    }
+
+    public function testUnsetMisconfiguredPropertyMustFailWithDirectSyntax(): void
+    {
+        $obj = $this->defaultTestObject();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to unset misconfigured property|');
 
-        unset($obj->p1);
+        unset($obj->bar);
     }
 
-    public function test_unset_method_should_uninitialize_property(): void
+    public function testUnsetMisconfiguredPropertyMustFailWithMethodSyntax(): void
     {
-        $obj = new class {
-            use Accessible;
-
-            #[Get, Delete]
-            protected string $p1 = 'initial value';
-
-            public function issetP1(): bool
-            {
-                return isset($this->p1);
-            }
-        };
-
-        /** @phpstan-ignore-next-line */
-        $obj->unsetP1();
-
-        $this->assertEquals(false, $obj->issetP1());
-        $this->assertEquals(false, isset($obj->p1));
-    }
-
-    public function test_unset_method_should_fail_protected_property(): void
-    {
-        $obj = new class {
-            use Accessible;
-
-            protected string $p1 = 'initial value';
-        };
+        $obj = $this->defaultTestObject();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to unset misconfigured property|');
 
         /** @phpstan-ignore-next-line */
-        $obj->unsetP1();
+        $obj->unsetBar();
     }
 
-    public function test_honour_existing_unsetter_method(): void
+    /**
+     * @return array<array<object>>
+     */
+    public function dataProviderForHonouringEndpointMethods(): array
     {
-        $obj = new class {
-            use Accessible;
+        return [
+            [
+                new #[Delete] class {
+                    use Accessible;
 
-            #[Get, Delete]
-            protected string $p1 = 'initial value';
+                    protected string $foo = 'foo';
 
-            public function unsetP1(): void
-            {
-            }
+                    public function unsetFoo(): void
+                    {
+                        $this->foo = 'foo from endpoint method';
+                    }
 
-            public function issetP1(): bool
-            {
-                return isset($this->p1);
-            }
-        };
+                    public function getFooValue(): string
+                    {
+                        return $this->foo;
+                    }
+                }
+            ],
+            [
+                new #[Delete] class {
+                    use Accessible;
 
-        unset($obj->p1);
-        $this->assertEquals(true, $obj->issetP1());
-        $this->assertEquals(true, isset($obj->p1));
+                    protected string $foo = 'foo';
+
+                    protected function unsetFoo(): void
+                    {
+                        $this->foo = 'foo from endpoint method';
+                    }
+
+                    public function getFooValue(): string
+                    {
+                        return $this->foo;
+                    }
+                }
+            ]
+
+        ];
     }
 
-    public function test_unsetting_immutable_property_using_native_unset_must_fail(): void
-    {
-        $obj = new #[Delete, Immutable] class {
-            use Accessible;
 
-            protected string $p1 = 'initial value';
-        };
+    /** @dataProvider dataProviderForHonouringEndpointMethods */
+    public function testHonourUnsetterEndpointMethod(object $obj): void
+    {
+        $expectedValue = 'foo from endpoint method';
+
+        $clone = clone $obj;
+        unset($clone->foo);
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $clone->getFooValue()
+        );
+
+        $clone = clone $obj;
+        /** @phpstan-ignore-next-line */
+        $clone->unsetFoo();
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $clone->getFooValue()
+        );
+
+        $clone = clone $obj;
+        /** @phpstan-ignore-next-line */
+        $clone->unset('foo');
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $clone->getFooValue()
+        );
+
+        $clone = clone $obj;
+        /** @phpstan-ignore-next-line */
+        $clone->unset(['foo']);
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $clone->getFooValue()
+        );
+    }
+
+    public function testUnsetImmutablePropertyMustFailWithDirectSyntax(): void
+    {
+        $obj = $this->defaultTestObject();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|immutable property .+ can\'t be unset|');
 
-        unset($obj->p1);
+        unset($obj->immutable);
     }
 
-    public function test_unsetting_immutable_property_using_magic_call_must_fail(): void
+    public function testUnsetImmutablePropertyMustFailWithMethodSyntax(): void
     {
-        $obj = new #[Delete, Immutable] class {
-            use Accessible;
-
-            protected string $p1 = 'initial value';
-        };
+        $obj = $this->defaultTestObject();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|immutable property .+ can\'t be unset|');
 
         /** @phpstan-ignore-next-line */
-        $obj->unset('p1');
+        $obj->unsetImmutable();
     }
 
-    public function test_unsetting_multiple_values_should_work(): void
+    public function testUnsetMustUnsetMultipleValuesAtOnce(): void
     {
         $obj = new #[Get, Delete] class {
             use Accessible;
 
-            protected string $p0 = 'initialized1';
-            protected string $p1 = 'initialized2';
-            protected string $p2 = 'initialized3';
-            protected string $p3 = 'initialized4';
+            protected string $foo0 = 'foo';
+            protected string $foo1 = 'foo';
+            protected string $foo2 = 'foo';
+            protected string $foo3 = 'foo';
 
             public function issetPropertyValue(string $propertyName): bool
             {
@@ -162,30 +244,34 @@ class UnsetTest extends TestCase
             }
         };
 
+        $unsetValues = [];
         for ($c = 0; $c <= 3; $c++) {
-            $this->assertEquals(true, $obj->issetPropertyValue('p'.$c));
+            $this->assertEquals(
+                true,
+                $obj->issetPropertyValue('foo'.$c)
+            );
+            $unsetValues[] = 'foo'.$c;
         }
 
         /** @phpstan-ignore-next-line */
-        $obj->unset(['p0', 'p1', 'p2', 'p3']);
+        $obj->unset($unsetValues);
 
         for ($c = 0; $c <= 3; $c++) {
-            $this->assertEquals(false, $obj->issetPropertyValue('p'.$c));
+            $this->assertEquals(
+                false,
+                $obj->issetPropertyValue('foo'.$c)
+            );
         }
     }
 
-    public function test_unsetting_public_property_must_fail(): void
+    public function testUnsetPublicPropertyMustFail(): void
     {
-        $obj = new #[Delete] class {
-            use Accessible;
-
-            public string $p1 = 'old value';
-        };
+        $obj = $this->defaultTestObject();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|implicit unsetter is not available for public properties|');
 
         /** @phpstan-ignore-next-line */
-        $obj->unsetP1();
+        $obj->unsetPublic();
     }
 }

@@ -12,86 +12,107 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Tests;
 
+use Exception;
 use margusk\Accessors\Accessible;
 use margusk\Accessors\Exception\InvalidArgumentException;
 
 class DocBlockTest extends TestCase
 {
-    public function test_property_tag_must_be_supported_in_docblock(): void
+    /**
+     * @throws Exception
+     */
+    public function testPropertyTagMustBeSupportedInDocblock(): void
     {
         /**
-         * @property string $p1
+         * @property string $foo
          */
         $obj = new class {
             use Accessible;
 
-            protected string $p1 = 'p1';
+            protected string $foo = 'foo';
         };
 
-        // p1 must be readable/writable
+        // $foo must be readable/writable
+        /** @noinspection Annotator */
         $this->assertEquals(
-            'p1',
+            'foo',
             /** @phpstan-ignore-next-line */
-            $obj->p1
+            $obj->foo
         );
 
-        $expectedValue = 'value changed';
+        $expectedValue = $this->randomString();
 
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = $expectedValue;
+        /**
+         * @phpstan-ignore-next-line
+         * @noinspection Annotator
+         */
+        $obj->foo = $expectedValue;
 
+        /** @noinspection Annotator */
         $this->assertEquals(
             $expectedValue,
             /** @phpstan-ignore-next-line */
-            $obj->p1
+            $obj->foo
         );
     }
 
-    public function test_propertyread_tag_must_be_supported_in_docblock(): void
+    public function testPropertyreadTagMustBeSupportedInDocblock(): void
     {
         /**
-         * @property-read string $p1
+         * @property-read string $foo
          */
         $obj = new class {
             use Accessible;
 
-            protected string $p1 = 'p1';
+            protected string $foo = 'foo';
         };
 
-        // p1 must be readable
+        // $foo must be readable
+        /** @noinspection Annotator */
         $this->assertEquals(
-            'p1',
+            'foo',
             /** @phpstan-ignore-next-line */
-            $obj->p1
+            $obj->foo
         );
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/tried to set misconfigured property/');
 
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = 'new value';
+        /**
+         * @phpstan-ignore-next-line
+         * @noinspection Annotator
+         */
+        $obj->foo = 'new value';
     }
 
-    public function test_propertywrite_tag_must_be_supported_in_docblock(): void
+    public function testPropertywriteTagMustBeSupportedInDocblock(): void
     {
         /**
-         * @property-write string $p1
+         * @property-write string $foo
          */
         $obj = new class {
             use Accessible;
 
-            protected string $p1 = 'p1';
+            protected string $foo = 'foo';
 
-            public function getP1Value(): string
+            public function getFooValue(): string
             {
-                return $this->p1;
+                return $this->foo;
             }
         };
 
-        $expectedValue = 'new value';
+        $expectedValue = $this->randomString();
 
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = $expectedValue;
+        /**
+         * @phpstan-ignore-next-line
+         * @noinspection Annotator
+         */
+        $obj->foo = $expectedValue;
+
+        $this->assertEquals(
+            $expectedValue,
+            $obj->getFooValue()
+        );
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/tried to get misconfigured property/');
@@ -99,21 +120,47 @@ class DocBlockTest extends TestCase
         /**
          * @phpstan-ignore-next-line
          * @noinspection PhpExpressionResultUnusedInspection
+         * @noinspection Annotator
          */
-        $obj->p1;
+        $obj->foo;
     }
 
-    public function test_tag_in_parent_class_must_be_inherited(): void
+    /**
+     * @throws Exception
+     */
+    public function testPropertyTagFromParentClassMustBeInherited(): void
     {
-        $obj = new class extends ParentTestClassWithPropertyAttributes {
-        };
+        $parentName = $this->createClass(
+            '
+            /**
+             * @property string $foo
+             */
+            class %name%
+            {
+                use '.Accessible::class.';
+    
+                protected string $foo;
+            }        
+        '
+        );
 
-        $expectedValue = 'new value';
-        $obj->setParentProperty($expectedValue);
+        $child = $this->createObjFromClassCode(
+            '
+            class %name% extends '.$parentName.'
+            {
+            }
+        '
+        );
+
+        $expectedValue = $this->randomString();
+
+        /** @phpstan-ignore-next-line */
+        $child->setFoo($expectedValue);
 
         $this->assertEquals(
             $expectedValue,
-            $obj->getParentProperty()
+            /** @phpstan-ignore-next-line */
+            $child->getFoo()
         );
     }
 

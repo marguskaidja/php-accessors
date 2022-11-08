@@ -100,11 +100,9 @@ class Properties
         ) {
             $name = $rfProperty->getName();
             $nameLowerCase = strtolower($name);
+            $p = null;
 
-            if (
-                null === $parentProperties
-                || $rfClass->name === $rfProperty->getDeclaringClass()->name
-            ) {
+            if ($rfClass->name === $rfProperty->getDeclaringClass()->name) {
                 if (isset($docBlockAttributes[$name])) {
                     $attributes = $docBlockAttributes[$name]->mergeWithParent($classAttributes);
                 } else {
@@ -116,7 +114,7 @@ class Properties
                     $attributes,
                     ($accessorEndpoints[$nameLowerCase] ?? [])
                 );
-            } else {
+            } elseif (null !== $parentProperties) {
                 $p = $parentProperties->findConf($name);
             }
 

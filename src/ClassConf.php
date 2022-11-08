@@ -529,4 +529,14 @@ final class ClassConf
             $this->properties->findConf($propertyName)
         );
     }
+
+    public function properties(): Properties
+    {
+        return $this->properties;
+    }
+
+    public function attributes(): Attributes
+    {
+        return $this->attributes;
+    }
 }

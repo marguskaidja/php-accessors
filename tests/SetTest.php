@@ -17,390 +17,472 @@ use margusk\Accessors\Attr\Mutator;
 use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
 
+use function call_user_func;
+
 class SetTest extends TestCase
 {
-    public function test_set_should_update_value_with_property_attribute(): void
+    /**
+     * @return array<array<object>>
+     */
+    public function dataProviderForAttributeConfiguration(): array
     {
-        $obj = new class {
-            use Accessible;
+        return [
+            [
+                new class {
+                    use Accessible;
 
-            #[Set]
-            protected string $p1;
+                    #[Set] protected string $foo = "foo";
 
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
+                    public function getFooValue(): string
+                    {
+                        return $this->foo;
+                    }
+                }
+            ],
 
-        $value = 'this is updated value';
+            [
+                new #[Set] class {
+                    use Accessible;
 
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = $value;
+                    protected string $foo = "foo";
 
-        $this->assertEquals($value, $obj->getP1Value());
+                    public function getFooValue(): string
+                    {
+                        return $this->foo;
+                    }
+                }
+            ],
 
-        $value = 'this is updated value2';
+            [
+                new #[Set(false)] class {
+                    use Accessible;
 
-        /** @phpstan-ignore-next-line */
-        $obj->p1($value);
+                    #[Set(true)] protected string $foo = "foo";
 
-        $this->assertEquals($value, $obj->getP1Value());
-
-        $value = 'this is updated value3';
-
-        /** @phpstan-ignore-next-line */
-        $obj->setP1($value);
-
-        $this->assertEquals($value, $obj->getP1Value());
-
-        $value = 'this is updated value4';
-
-        /** @phpstan-ignore-next-line */
-        $obj->set(['p1' => $value]);
-
-        $this->assertEquals($value, $obj->getP1Value());
-    }
-
-    public function test_set_should_update_value_with_class_attribute(): void
-    {
-        $obj = new #[Set] class {
-            use Accessible;
-
-            protected string $p1;
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        $value = 'this is updated value';
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = $value;
-
-        $this->assertEquals($value, $obj->getP1Value());
-
-        $value = 'this is updated value2';
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1($value);
-
-        $this->assertEquals($value, $obj->getP1Value());
-
-        $value = 'this is updated value3';
-
-        /** @phpstan-ignore-next-line */
-        $obj->setP1($value);
-
-        $this->assertEquals($value, $obj->getP1Value());
-
-        $value = 'this is updated value4';
-
-        /** @phpstan-ignore-next-line */
-        $obj->set(['p1' => $value]);
-
-        $this->assertEquals($value, $obj->getP1Value());
-    }
-
-    public function test_set_should_update_value_with_property_attribute_override(): void
-    {
-        $obj = new #[Set(false)] class {
-            use Accessible;
-
-            #[Set(true)]
-            protected string $p1;
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        $value = 'this is updated value';
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = $value;
-
-        $this->assertEquals($value, $obj->getP1Value());
-
-        $value = 'this is updated value2';
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1($value);
-
-        $this->assertEquals($value, $obj->getP1Value());
-
-        $value = 'this is updated value3';
-
-        /** @phpstan-ignore-next-line */
-        $obj->setP1($value);
-
-        $this->assertEquals($value, $obj->getP1Value());
-
-        $value = 'this is updated value4';
-
-        /** @phpstan-ignore-next-line */
-        $obj->set(['p1' => $value]);
-
-        $this->assertEquals($value, $obj->getP1Value());
-    }
-
-    public function test_set_should_update_multiple_values(): void
-    {
-        $obj = new #[Set] class {
-            use Accessible;
-
-            protected string $p0 = 'empty';
-            protected string $p1 = 'empty';
-            protected string $p2 = 'empty';
-            protected string $p3 = 'empty';
-
-            public function getPropertyValue(string $propertyName): string
-            {
-                return $this->{$propertyName};
-            }
-        };
-
-        $values = [
-            'value0',
-            'value1',
-            'value2',
-            'value3'
+                    public function getFooValue(): string
+                    {
+                        return $this->foo;
+                    }
+                }
+            ]
         ];
+    }
+
+    /** @dataProvider dataProviderForAttributeConfiguration */
+    public function testSetMustUpdateValueWithVariousSimpleConfiguration(object $obj): void
+    {
+        $expectedValue = $this->randomString();
+        /** @phpstan-ignore-next-line */
+        $obj->foo = $expectedValue;
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
+
+        $expectedValue = $this->randomString();
+        /** @phpstan-ignore-next-line */
+        $obj->foo($expectedValue);
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
+
+        $expectedValue = $this->randomString();
+        /** @phpstan-ignore-next-line */
+        $obj->setFoo($expectedValue);
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
+
+        $expectedValue = $this->randomString();
+        /** @phpstan-ignore-next-line */
+        $obj->set('foo', $expectedValue);
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
+
+        $expectedValue = $this->randomString();
+        /** @phpstan-ignore-next-line */
+        $obj->set(['foo' => $expectedValue]);
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
+    }
+
+    public function testSetMustUpdateMultiplePropertiesAtOnce(): void
+    {
+        $obj = new #[Set] class {
+            use Accessible;
+
+            protected string $foo0;
+            protected string $foo1;
+            protected string $foo2;
+            protected string $foo3;
+
+            public function getFooValue(string $name): string
+            {
+                return $this->{$name};
+            }
+        };
+
+        $setValues = [];
+        for ($i = 0; $i <= 3; $i++) {
+            $setValues['foo'.$i] = $this->randomString();
+        }
 
         /** @phpstan-ignore-next-line */
-        $obj->set([
-            'p0' => $values[0],
-            'p1' => $values[1],
-            'p2' => $values[2],
-            'p3' => $values[3],
-        ]);
+        $obj->set($setValues);
 
-        for ($c = 0; $c <= 3; $c++) {
-            $this->assertEquals($values[$c], $obj->getPropertyValue('p'.$c));
+        foreach ($setValues as $n => $expectedValue) {
+            $this->assertEquals(
+                $expectedValue,
+                $obj->getFooValue($n)
+            );
         }
     }
 
-    public function test_mutator_function_must_be_called_in_setter(): void
+    public function testSettingUnknownPropertyUsingMultiplePropertySetterMustFail(): void
     {
-        $obj = new #[Set, Mutator("htmlspecialchars")] class {
-            use Accessible;
-
-            protected string $p1;
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        $value = '<b>GetSet</b>';
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = $value;
-
-        $this->assertEquals(htmlspecialchars($value), $obj->getP1Value());
-    }
-
-    public function test_class_mutator_method_with_property_substition_must_be_called(): void
-    {
-        $obj = new #[Set, Mutator([ParentTestClass::class, "staticMutate%property%"])] class {
-            use Accessible;
-
-            protected string $p1;
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        $value = '<b>GetSet</b>';
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = $value;
-
-        $this->assertEquals(ParentTestClass::staticMutateP1($value), $obj->getP1Value());
-    }
-
-    public function test_object_mutator_method_with_propertyname_substitution_must_be_called(): void
-    {
-        $obj = new #[Set, Mutator('$this->mutate%property%')] class {
-            use Accessible;
-
-            protected string $p1;
-
-            public function mutateP1(string $value): string
-            {
-                return htmlspecialchars($value);
-            }
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        $value = '<b>GetSet</b>';
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = $value;
-
-        $this->assertEquals($obj->mutateP1($value), $obj->getP1Value());
-    }
-
-    public function test_disable_mutator_with_property_attribute_override(): void
-    {
-        $obj = new #[Set, Mutator("htmlspecialchars")] class {
-            use Accessible;
-
-            #[Mutator(null)]
-            protected string $p1;
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        $value = '<b>GetSet</b>';
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = $value;
-
-        $this->assertEquals($value, $obj->getP1Value());
-    }
-
-    public function test_set_should_fail_with_protected_value(): void
-    {
-        /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
         $obj = new #[Set] class {
             use Accessible;
 
-            protected string $p1;
-
-            #[Set(false)]
-            protected string $p2;
+            protected string $foo1 = 'foo';
+            protected string $foo5 = 'foo';
         };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set unknown property|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->set([
+            'foo1' => 'foo1',
+            'foo2' => 'foo2'
+        ]);
+    }
+
+    /**
+     * @return mixed[]
+     */
+    public function dataProviderForMutatorTests(): array
+    {
+        $classWithStaticMethod = $this->createClass(
+            '
+            class %name% {
+                public static function staticMutator(string $value): string
+                {
+                    return \md5($value);
+                }
+
+                public static function staticMutatorForFoo(string $value): string
+                {
+                    return \md5($value);
+                }
+            }
+        '
+        );
+
+        $objForThisTest = $this->createObjFromClassCode(
+            '
+            #['.Set::class.','.Mutator::class.'("\$this->mutatorFor%property%")]
+            class %name% {
+                use '.Accessible::class.';
+                protected string $foo;
+
+                public function getFooValue(): string
+                {
+                    return $this->foo;
+                }
+
+                public function mutatorForFoo(string $value): string
+                {
+                    return \md5($value);
+                }
+            }
+        '
+        );
+
+        return [
+            [
+                new #[Set, Mutator('\md5')] class {
+                    use Accessible;
+
+                    protected string $foo;
+
+                    public function getFooValue(): string
+                    {
+                        return $this->foo;
+                    }
+                },
+                '\md5'
+            ],
+
+            [
+                $this->createObjFromClassCode(
+                    '
+                    #['.Set::class.','.Mutator::class.'(["'.$classWithStaticMethod.'","staticMutator"])]
+                    class %name% {
+                        use '.Accessible::class.';
+                        protected string $foo;
+                        public function getFooValue(): string
+                        {
+                            return $this->foo;
+                        }
+                    }
+                '
+                ),
+                [$classWithStaticMethod, "staticMutator"]
+            ],
+
+            [
+                $this->createObjFromClassCode(
+                    '
+                    #['.Set::class.','.Mutator::class.'(["'.$classWithStaticMethod.'","staticMutatorFor%property%"])]
+                    class %name% {
+                        use '.Accessible::class.';
+                        protected string $foo;
+                        public function getFooValue(): string
+                        {
+                            return $this->foo;
+                        }
+                    }
+                '
+                ),
+                [$classWithStaticMethod, "staticMutatorForFoo"]
+            ],
+
+            [
+                $objForThisTest,
+                [$objForThisTest, "mutatorForFoo"]
+            ],
+
+        ];
+    }
+
+    /** @dataProvider dataProviderForMutatorTests */
+    public function testMutatorFunction(object $obj, callable $mutator): void
+    {
+        $inputValue = uniqid();
+
+        /** @phpstan-ignore-next-line */
+        $obj->foo = $inputValue;
+
+        $expectedValue = call_user_func($mutator, $inputValue);
+
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
+    }
+
+    public function testMutatorMustNotBeCalledWhenDisabledUsingOverride(): void
+    {
+        $obj = new #[Set, Mutator('\md5')] class {
+            use Accessible;
+
+            #[Mutator(null)]
+            protected string $foo;
+
+            public function getFooValue(): string
+            {
+                return $this->foo;
+            }
+        };
+
+        $expectedValue = $this->randomString();
+
+        /**
+         * @phpstan-ignore-next-line
+         * @noinspection Annotator
+         */
+        $obj->foo = $expectedValue;
+
+        $this->assertEquals(
+            $expectedValue,
+            $obj->getFooValue()
+        );
+    }
+
+    public function testSetMustFailWithPropertyWhichIsNotMadeAccessibleWithMethodSyntax(): void
+    {
+        $obj = $this->defaultTestObject();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to set misconfigured property|');
 
         /** @phpstan-ignore-next-line */
-        $obj->p2 = 'this must fail';
+        $obj->setBar('new bar');
     }
 
-    public function test_set_should_fail_with_unknown_property_through_direct_assignment(): void
+    /**
+     * Returns object where:
+     *  $public is PUBLIC property
+     *  $foo is WRITABLE and is INITIALIZED
+     *  $bar is NOT WRITABLE and is INITIALIZED
+     *  $baz must be left UNDECLARED
+     *  $uninitialized is WRITABLE and is UNINITIALIZED
+     *
+     * @return object
+     */
+    protected function defaultTestObject(): object
     {
-        /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
-        $obj = new #[Set] class {
+        return new #[Set] class {
             use Accessible;
 
-            protected string $p1 = 'this is protected value';
+            public string $public = 'public';
+
+            protected string $foo = 'foo';
+
+            #[Set(false)]
+            protected string $bar = 'bar';
+
+            protected string $uninitialized;
         };
+    }
+
+    public function testSetMustFailWithPropertyWhichIsNotMadeAccessibleWithDirectSyntax(): void
+    {
+        $obj = $this->defaultTestObject();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set misconfigured property|');
+
+        /**
+         * @phpstan-ignore-next-line
+         */
+        $obj->bar = 'new bar';
+    }
+
+    public function testSetMustFailWithUnknownPropertyWithDirectSyntax(): void
+    {
+        $obj = $this->defaultTestObject();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set unknown property|');
+
+        /**
+         * @phpstan-ignore-next-line
+         */
+        $obj->baz = 'new baz';
+    }
+
+    public function testSetMustFailWithUnknownPropertyWithMethodSyntax(): void
+    {
+        $obj = $this->defaultTestObject();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to set unknown property|');
 
         /** @phpstan-ignore-next-line */
-        $obj->p2 = 'new value';
+        $obj->setBaz('new baz');
     }
 
-    public function test_set_should_fail_with_unknown_property_using_method_call(): void
+    public function testSetPublicPropertyWithMethodSyntaxMustFail(): void
     {
-        $obj = new #[Set] class {
-            use Accessible;
-
-            protected string $p1 = 'this is protected value';
-        };
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches('|tried to set unknown property|');
-
-        /** @phpstan-ignore-next-line */
-        $obj->setP2('new value');
-    }
-
-    public function test_set_should_fail_with_unknown_property_using_method_call_with_multiple_properties(): void
-    {
-        $obj = new #[Set] class {
-            use Accessible;
-
-            protected string $p1 = 'this is protected value';
-            protected string $p2 = 'this is protected value';
-            protected string $p3 = 'this is protected value';
-            protected string $p5 = 'this is protected value';
-        };
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches('|tried to set unknown property|');
-
-        /** @phpstan-ignore-next-line */
-        $obj->set([
-            'p1' => 'new value',
-            'p2' => 'new value',
-            'p3' => 'new value',
-            'p4' => 'new value'
-        ]);
-    }
-
-    public function test_attributes_must_be_inherited_from_parent_class(): void
-    {
-        $obj = new class extends ParentTestClass {
-            protected string $p1;
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        $value = 'this is protected value';
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = $value;
-
-        $this->assertEquals($value, $obj->getP1Value());
-    }
-
-    public function test_honour_existing_setter_method(): void
-    {
-        $obj = new #[Set] class {
-            use Accessible;
-
-            protected string $p1;
-
-            public function setP1(string $value): void
-            {
-                $this->p1 = 'mutated value';
-            }
-
-            public function getP1value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = 'updated value';
-
-        $this->assertEquals('mutated value', $obj->getP1value());
-    }
-
-    public function test_setting_public_property_must_fail(): void
-    {
-        $obj = new #[Set] class {
-            use Accessible;
-
-            public string $p1 = 'old value';
-        };
+        $obj = $this->defaultTestObject();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|implicit setter is not available for public properties|');
 
         /** @phpstan-ignore-next-line */
-        $obj->setP1('new value');
+        $obj->setPublic('new public');
+    }
+
+    /**
+     * @return array<array<object>>
+     */
+    public function dataProviderForHonouringEndpointMethods(): array
+    {
+        return [
+            [
+                new #[Set] class {
+                    use Accessible;
+
+                    protected string $foo = 'foo';
+
+                    public function setFoo(): void
+                    {
+                        $this->foo = 'foo from endpoint method';
+                    }
+
+                    public function getFooValue(): string
+                    {
+                        return $this->foo;
+                    }
+                }
+            ],
+            [
+                new #[Set] class {
+                    use Accessible;
+
+                    protected string $foo = 'foo';
+
+                    protected function setFoo(): void
+                    {
+                        $this->foo = 'foo from endpoint method';
+                    }
+
+                    public function getFooValue(): string
+                    {
+                        return $this->foo;
+                    }
+                }
+            ]
+
+        ];
+    }
+
+    /** @dataProvider dataProviderForHonouringEndpointMethods */
+    public function testHonourEndpointMethod(object $obj): void
+    {
+        $expectedValue = 'foo from endpoint method';
+
+        /** @phpstan-ignore-next-line */
+        $obj->foo = $this->randomString();
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
+
+        /** @phpstan-ignore-next-line */
+        $obj->setFoo($this->randomString());
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
+
+        /** @phpstan-ignore-next-line */
+        $obj->foo($this->randomString());
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
+
+        /** @phpstan-ignore-next-line */
+        $obj->set('foo', $this->randomString());
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
+
+        /** @phpstan-ignore-next-line */
+        $obj->set(['foo' => $this->randomString()]);
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $obj->getFooValue()
+        );
     }
 }
