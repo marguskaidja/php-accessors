@@ -526,7 +526,7 @@ Notes:
 
 Having accessors with _magic methods_ can bring the disadvantages of losing somewhat of IDE autocompletion and make static code analyzers grope in the dark.
 
-To inform static code parsers about availability of magic methods and properties, PHPDoc [@method](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/method.html) and [@property](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) should be specified in classes DocBlock:
+To inform static code parsers about availability of magic methods and properties, PHPDocs [@method](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/method.html) and [@property](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) should be specified in class'es DocBlock:
 
 ```php
 use margusk\Accessors\Accessible;

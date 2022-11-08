@@ -70,13 +70,13 @@ class Attributes
         return $that;
     }
 
-    public static function fromDocBlock(PhpDocTagNode $tagNode): ?self
+    public static function fromPHPDoc(PhpDocTagNode $tagNode): ?self
     {
-        /** @var array<class-string<Attr>> $found */
+        /** @var array<class-string<Attr>, bool> $found */
         $found = match (strtolower($tagNode->name)) {
-            '@property' => [Get::class, Set::class],
-            '@property-read' => [Get::class],
-            '@property-write' => [Set::class],
+            '@property' => [Get::class => true, Set::class => true],
+            '@property-read' => [Get::class => true, Set::class => false],
+            '@property-write' => [Get::class => false, Set::class => true],
             default => []
         };
 
@@ -86,10 +86,10 @@ class Attributes
 
         $that = new self();
 
-        foreach ($found as $n) {
+        foreach ($found as $n => $enabled) {
             if (true === array_key_exists($n, $that->attributes)) {
                 /** @var Attr $inst */
-                $inst = new $n(true);
+                $inst = new $n($enabled);
                 $that->attributes[$n] = $inst;
             }
         }

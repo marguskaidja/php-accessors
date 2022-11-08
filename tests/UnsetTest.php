@@ -86,6 +86,7 @@ class UnsetTest extends TestCase
         return new #[Get, Delete] class {
             use Accessible;
 
+            /** @phpstan-ignore-next-line */
             private string $private = 'private';
 
             public string $public = 'public';
@@ -284,7 +285,6 @@ class UnsetTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('|tried to unset unknown property|');
 
-        /** @phpstan-ignore-next-line */
         unset($obj->private);
     }
 

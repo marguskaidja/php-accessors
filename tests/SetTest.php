@@ -337,6 +337,7 @@ class SetTest extends TestCase
         return new #[Set] class {
             use Accessible;
 
+            /** @phpstan-ignore-next-line */
             private string $private = 'private';
 
             public string $public = 'public';

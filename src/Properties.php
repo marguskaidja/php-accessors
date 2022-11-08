@@ -52,7 +52,7 @@ class Properties
         $that = new self();
 
         /* Learn from DocBlock comments which properties should be exposed and how (read-only,write-only or both) */
-        $docBlockAttributes = $that->parseDocBlock($rfClass);
+        $phpDocAttributes = $that->parsePHPDoc($rfClass);
 
         /** @var Format $attr */
         $attr = $classAttributes->get(Format::class);
@@ -100,8 +100,8 @@ class Properties
             $p = null;
 
             if ($rfClass->name === $rfProperty->getDeclaringClass()->name) {
-                if (isset($docBlockAttributes[$name])) {
-                    $attributes = $docBlockAttributes[$name]->mergeWithParent($classAttributes);
+                if (isset($phpDocAttributes[$name])) {
+                    $attributes = $phpDocAttributes[$name]->mergeWithParent($classAttributes);
                 } else {
                     $attributes = $classAttributes;
                 }
@@ -128,10 +128,10 @@ class Properties
      *
      * @return array<string, Attributes>
      */
-    private function parseDocBlock(ReflectionClass $rfClass): array
+    private function parsePHPDoc(ReflectionClass $rfClass): array
     {
-        static $docBlockParser = null;
-        static $docBlockLexer = null;
+        static $phpDocParser = null;
+        static $phpDocLexer = null;
 
         $docComment = $rfClass->getDocComment();
 
@@ -139,20 +139,20 @@ class Properties
             return [];
         }
 
-        if (null === $docBlockParser) {
+        if (null === $phpDocParser) {
             $constExprParser = new ConstExprParser();
 
-            $docBlockParser = new PhpDocParser(
+            $phpDocParser = new PhpDocParser(
                 new TypeParser($constExprParser),
                 $constExprParser
             );
 
-            $docBlockLexer = new Lexer();
+            $phpDocLexer = new Lexer();
         }
 
-        $node = $docBlockParser->parse(
+        $node = $phpDocParser->parse(
             new TokenIterator(
-                $docBlockLexer->tokenize($docComment)
+                $phpDocLexer->tokenize($docComment)
             )
         );
 
@@ -163,7 +163,7 @@ class Properties
                 && $childNode->value instanceof PropertyTagValueNode
                 && str_starts_with($childNode->value->propertyName, '$')
             ) {
-                $attributes = Attributes::fromDocBlock($childNode);
+                $attributes = Attributes::fromPHPDoc($childNode);
 
                 if (null !== $attributes) {
                     $result[substr($childNode->value->propertyName, 1)] = $attributes;

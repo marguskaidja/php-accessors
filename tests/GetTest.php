@@ -103,6 +103,7 @@ class GetTest extends TestCase
         return new #[Get] class {
             use Accessible;
 
+            /** @phpstan-ignore-next-line */
             private string $private = 'private';
 
             public string $public = 'public';

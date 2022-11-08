@@ -14,14 +14,16 @@ namespace margusk\Accessors\Tests;
 
 use Exception;
 use margusk\Accessors\Accessible;
+use margusk\Accessors\Attr\Get;
+use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
 
-class DocBlockTest extends TestCase
+class PHPDocPropertyTest extends TestCase
 {
     /**
      * @throws Exception
      */
-    public function testPropertyTagMustBeSupportedInDocblock(): void
+    public function testPropertyTagMustBeSupported(): void
     {
         /**
          * @property string $foo
@@ -56,7 +58,7 @@ class DocBlockTest extends TestCase
         );
     }
 
-    public function testPropertyreadTagMustBeSupportedInDocblock(): void
+    public function testPropertyreadTagMustBeSupported(): void
     {
         /**
          * @property-read string $foo
@@ -85,7 +87,7 @@ class DocBlockTest extends TestCase
         $obj->foo = 'new value';
     }
 
-    public function testPropertywriteTagMustBeSupportedInDocblock(): void
+    public function testPropertywriteTagMustBeSupported(): void
     {
         /**
          * @property-write string $foo
@@ -123,5 +125,53 @@ class DocBlockTest extends TestCase
          * @noinspection Annotator
          */
         $obj->foo;
+    }
+
+    public function testAttributeMustBeMoreSignificantThanPhpdocTag(): void
+    {
+        /**
+         * @noinspection PhpObjectFieldsAreOnlyWrittenInspection
+         * @property string $foo
+         */
+        $obj = new class {
+            use Accessible;
+
+            #[Get(false),Set(false)]
+            protected string $foo = 'foo';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set misconfigured property|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->foo = 'this must fail';
+    }
+
+    /**
+     * This tests situation where PHPDoc defines property $foo with only read accessor, but class
+     * has by default both READ and WRITE accessors enabled.
+     *
+     * In this situation property $foo must remain readonly, unless there's #[Set] attribute defined
+     * precisely at property's declaration..
+     *
+     * @return void
+     */
+    public function testPhpdocTagMustExplicitlyExcludeUnnamedAccessors(): void
+    {
+        /**
+         * @noinspection PhpObjectFieldsAreOnlyWrittenInspection
+         * @property-read string $foo
+         */
+        $obj = new #[Get,Set] class {
+            use Accessible;
+
+            protected string $foo = 'foo';
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set misconfigured property|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->foo = 'this must fail';
     }
 }

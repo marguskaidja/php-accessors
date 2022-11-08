@@ -7,6 +7,7 @@ namespace margusk\Accessors\Tests;
 use Exception;
 use margusk\Accessors\Accessible;
 use margusk\Accessors\Attr\Get;
+use margusk\Accessors\Attr\Mutator;
 use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
 
@@ -77,6 +78,7 @@ class InheritanceTest extends TestCase
 
         $this->assertEquals(
             'foo',
+            /** @phpstan-ignore-next-line */
             $child->foo
         );
 
@@ -163,9 +165,7 @@ class InheritanceTest extends TestCase
     {
         $parentName = $this->createClass(
             '
-            /**
-             * @property string $foo
-             */
+            /** @property string $foo */
             class %name%
             {
                 use '.Accessible::class.';
@@ -233,7 +233,6 @@ class InheritanceTest extends TestCase
 
         $this->assertEquals(
             $expectedValue,
-            /** @phpstan-ignore-next-line */
             $child->foo
         );
     }
@@ -275,7 +274,6 @@ class InheritanceTest extends TestCase
 
         $this->assertEquals(
             $expectedValue,
-            /** @phpstan-ignore-next-line */
             $child->foo
         );
     }
@@ -287,7 +285,7 @@ class InheritanceTest extends TestCase
      * @return void
      * @throws Exception
      */
-    public function testParentEndpointMustApplyToChildProperties(): void
+    public function testParentEndpointMustWorkWithChildProperties(): void
     {
         $expectedValue = 'this is parent endpoint';
 
@@ -317,8 +315,117 @@ class InheritanceTest extends TestCase
 
         $this->assertEquals(
             $expectedValue,
-            /** @phpstan-ignore-next-line */
             $child->foo
+        );
+    }
+
+    /**
+     * Test the significance when overriding attributes from furthest approximate definition
+     * to most precise definition.
+     *
+     * The override system is illustrated with following figure.
+     * Each time an attribute on the node is left undefined, it's fetched from parent node, so attribute
+     * defined for topmost class can propagate down to the last child, if not overridden meanwhile.
+     *
+     *     ...
+     *     |
+     *     - class1 attribute
+     *       |
+     *       - class1 property attribute
+     *       |
+     *       - class2 attribute
+     *           |
+     *           - class2 property attribute
+     *           |
+     *           - class3 attribute
+     *               |
+     *               - class3 property attribute
+     *               |
+     *               ...
+     *
+     *
+     * @return void
+     * @throws Exception
+     */
+    public function testAttributesInheritanceChain(): void
+    {
+        $mutatorsClass = $this->createClass(
+            '
+            class %name% {
+                public static function mutator1(string $value): string
+                {
+                    return "mutator1";
+                }
+
+                public static function mutator2(string $value): string
+                {
+                    return "mutator2";
+                }
+
+                public static function mutator3(string $value): string
+                {
+                    return "mutator3";
+                }
+
+                public static function mutator4(string $value): string
+                {
+                    return "mutator4";
+                }
+            }        
+        '
+        );
+
+        $parentName = $this->createClass(
+            '
+            #['.Get::class.','.Set::class.','.Mutator::class.'(["' . $mutatorsClass . '","mutator1"])]
+            class %name% {
+                use '.Accessible::class.';
+                protected string $foo;'. "\n" .'
+
+                #['.Mutator::class.'(["' . $mutatorsClass . '","mutator2"])]
+                protected string $bar;
+            }
+        '
+        );
+
+        $child = $this->createObjFromClassCode(
+            '
+            #['.Mutator::class.'(["' . $mutatorsClass . '","mutator3"])]
+            class %name% extends '.$parentName.' {
+                protected string $baz;
+
+                #['.Mutator::class.'(["' . $mutatorsClass . '","mutator4"])]
+                protected string $qux;
+            }
+        '
+        );
+
+        /** @phpstan-ignore-next-line */
+        $child->foo = $this->randomString();
+        $this->assertEquals(
+            'mutator1',
+            $child->foo
+        );
+
+        /** @phpstan-ignore-next-line */
+        $child->bar = $this->randomString();
+        $this->assertEquals(
+            'mutator2',
+            $child->bar
+        );
+
+        /** @phpstan-ignore-next-line */
+        $child->baz = $this->randomString();
+        $this->assertEquals(
+            'mutator3',
+            $child->baz
+        );
+
+        /** @phpstan-ignore-next-line */
+        $child->qux = $this->randomString();
+        $this->assertEquals(
+            'mutator4',
+            $child->qux
         );
     }
 }
