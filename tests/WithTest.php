@@ -19,69 +19,32 @@ use margusk\Accessors\Exception\BadMethodCallException;
 
 class WithTest extends TestCase
 {
-    public function test_set_method_must_fail(): void
+    public function testUpdateImmutablePropertyWithSetMethodMustFail(): void
     {
-        $obj = new #[Set, Immutable] class {
-            use Accessible;
-
-            protected string $p1;
-        };
+        $obj = $this->defaultTestObject();
 
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/is available only for mutable properties/');
 
         /** @phpstan-ignore-next-line */
-        $obj->setP1('this must fail');
+        $obj->setFoo('this must fail');
     }
 
-    public function test_direct_assignment_must_fail(): void
+    /**
+     * Returns object where:
+     *  $foo is WRITABLE, INITIALIZED and IMMUTABLE
+     *
+     * @param  string  $defaultValue
+     *
+     * @return object
+     */
+    protected function defaultTestObject(string $defaultValue = 'foo'): object
     {
-        /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
-        $obj = new #[Set, Immutable] class {
-            use Accessible;
-
-            protected string $p1;
-        };
-
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessageMatches('/can\'t be set using assignment operator/');
-
-        /** @phpstan-ignore-next-line */
-        $obj->p1 = 'this must fail';
-    }
-
-    public function test_original_object_must_not_be_modified(): void
-    {
-        $oldValue = 'old value';
-        $obj = new #[Set, Immutable] class($oldValue) {
+        return new #[Set, Immutable] class($defaultValue) {
             use Accessible;
 
             public function __construct(
-                protected string $p1
-            ) {
-            }
-
-            public function getP1Value(): string
-            {
-                return $this->p1;
-            }
-        };
-
-        /** @phpstan-ignore-next-line */
-        $obj->withP1('new value');
-
-        $this->assertEquals($oldValue, $obj->getP1Value());
-    }
-
-    public function test_cloned_object_must_be_returned_with_modified_value(): void
-    {
-        $oldValue = 'old value';
-
-        $obj1 = new #[Set, Immutable] class($oldValue) {
-            use Accessible;
-
-            public function __construct(
-                protected string $p1
+                protected string $foo
             ) {
             }
 
@@ -91,31 +54,60 @@ class WithTest extends TestCase
                 return $this === $other;
             }
 
-            public function getP1Value(): string
+            public function getFooValue(): string
             {
-                return $this->p1;
+                return $this->foo;
             }
         };
+    }
 
-        $newValue = 'new value';
+    public function testUpdateImmutablePropertyWithDirectAssignmentMustFail(): void
+    {
+        $obj = $this->defaultTestObject();
+
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('/can\'t be set using assignment operator/');
 
         /** @phpstan-ignore-next-line */
-        $obj2 = $obj1->withP1($newValue);
+        $obj->foo = 'this must fail';
+    }
 
-        $this->assertEquals($oldValue, $obj1->getP1Value());
-        $this->assertEquals($newValue, $obj2->getP1Value());
-        $this->assertNotObjectEquals($obj1, $obj2);
+    public function testUpdateImmutableObjectMustChangeOnlyClonedObject(): void
+    {
+        $randomString = $this->randomString();
+        $expectedOldValue = 'old is '.$randomString;
+
+        $oldObj = $this->defaultTestObject($expectedOldValue);
+
+        $expectedNewValue = 'new is '.$randomString;
+        /** @phpstan-ignore-next-line */
+        $newObj = $oldObj->withFoo($expectedNewValue);
+
+        // Old object and new object must be different
+        $this->assertNotObjectEquals($newObj, $oldObj);
+
+        // Check values
+        $this->assertEquals(
+            $expectedOldValue,
+            /** @phpstan-ignore-next-line */
+            $oldObj->getFooValue()
+        );
+
+        $this->assertEquals(
+            $expectedNewValue,
+            $newObj->getFooValue()
+        );
     }
 
     public function test_updating_multiple_values_should_work(): void
     {
-        $obj1 = new #[Set, Immutable] class {
+        $oldObj = new #[Set, Immutable] class {
             use Accessible;
 
-            protected string $p0 = 'empty0';
-            protected string $p1 = 'empty1';
-            protected string $p2 = 'empty2';
-            protected string $p3 = 'empty3';
+            protected string $foo0 = 'foo0';
+            protected string $foo1 = 'foo1';
+            protected string $foo2 = 'foo2';
+            protected string $foo3 = 'foo3';
 
             public function equals(self $other): bool
             {
@@ -129,30 +121,34 @@ class WithTest extends TestCase
             }
         };
 
-        $values = [
-            'value0',
-            'value1',
-            'value2',
-            'value3'
-        ];
-
-        /** @phpstan-ignore-next-line */
-        $obj2 = $obj1->with([
-            'p0' => $values[0],
-            'p1' => $values[1],
-            'p2' => $values[2],
-            'p3' => $values[3],
-        ]);
-
-        for ($c = 0; $c <= 3; $c++) {
-            $this->assertEquals('empty'.$c, $obj1->getPropertyValue('p'.$c));
-            $this->assertEquals($values[$c], $obj2->getPropertyValue('p'.$c));
+        $oldValues = [];
+        $newValues = [];
+        for ($i = 0; $i <= 3; $i++) {
+            $n = 'foo'.$i;
+            $newValues[$n] = $this->randomString();
+            $oldValues[$n] = $oldObj->getPropertyValue($n);
         }
 
-        $this->assertNotObjectEquals($obj1, $obj2);
+        /** @phpstan-ignore-next-line */
+        $newObj = $oldObj->with($newValues);
+
+        // Old object and new object must be different
+        $this->assertNotObjectEquals($newObj, $oldObj);
+
+        foreach ($newValues as $n => $expectedNewValue) {
+            $this->assertEquals(
+                $oldValues[$n],
+                $oldObj->getPropertyValue($n)
+            );
+
+            $this->assertEquals(
+                $expectedNewValue,
+                $newObj->getPropertyValue($n)
+            );
+        }
     }
 
-    public function test_honour_existing_wither_method(): void
+    public function testHonourEndpointMethod(): void
     {
         $obj = new #[Set, Immutable] class {
             const EXPECTED_VALUE = 'existing method called';

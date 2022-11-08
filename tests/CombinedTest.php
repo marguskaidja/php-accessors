@@ -14,106 +14,69 @@ namespace margusk\Accessors\Tests;
 
 use margusk\Accessors\Accessible;
 use margusk\Accessors\Attr\{Get, Set};
-use margusk\Accessors\Exception\InvalidArgumentException;
 
 class CombinedTest extends TestCase
 {
-    public function test_direct_syntax_with_invalid_name_case_must_fail(): void
+    public function testParentClassIsParsedCorrectlyLaterWhenChildIsAccessedFirst(): void
     {
-        $obj = new #[Get] class {
-            use Accessible;
+        $parentName = $this->createClass(
+            '   
+            #['.Get::class.','.Set::class.']
+            class %name% {
+                use '.Accessible::class.';
+                protected string $foo = "foo";
+            }
+        '
+        );
 
-            protected string $PropertY = 'some value';
-        };
+        $child = $this->createObjFromClassCode(
+            '
+            class %name% extends '.$parentName.' {}
+        '
+        );
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches('/tried to get unknown property/');
+        $parent = new $parentName();
 
-        /**
-         * @noinspection PhpExpressionResultUnusedInspection
-         * @phpstan-ignore-next-line
-         */
-        $obj->propertY;
-    }
-
-    public function test_method_syntax_with_property_as_argument_with_invalid_case_must_fail(): void
-    {
-        $obj = new #[Get] class {
-            use Accessible;
-
-            protected string $PropertY = 'some value';
-        };
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches('/tried to get unknown property/');
+        $expectedValueForChild = 'child foo';
+        $expectedValueForParent = 'parent foo';
 
         /** @phpstan-ignore-next-line */
-        $obj->get('PROPerty');
+        $child->foo = $expectedValueForChild;
+        /** @phpstan-ignore-next-line */
+        $parent->foo = $expectedValueForParent;
+
+        $this->assertEquals(
+            $expectedValueForChild,
+            $child->foo
+        );
+
+        $this->assertEquals(
+            $expectedValueForParent,
+            $parent->foo
+        );
     }
 
-    public function test_method_syntax_with_property_as_part_of_method_name_must_succeed(): void
+    public function testNamedArgumentsToAccessorMethodActTheSameAsWithoutNamedArguments(): void
     {
         $obj = new #[Get, Set] class {
             use Accessible;
 
-            protected string $PropertY = 'some value';
-        };
+            protected string $foo = 'some value';
 
-        $this->assertEquals(
-            'some value',
-            /** @phpstan-ignore-next-line */
-            $obj->propertY()
-        );
-
-        /** @phpstan-ignore-next-line */
-        $obj->setPROPERTY('new value');
-
-        $this->assertEquals(
-            'new value',
-            /** @phpstan-ignore-next-line */
-            $obj->getpRoPertY()
-        );
-    }
-
-    public function test_parent_class_is_parsed_correctly_later_when_child_is_accessed_first(): void
-    {
-        $child = new #[Get, Set] class extends ParentTestClassForAccessOrder {
-            use Accessible;
-        };
-
-        $parent = new ParentTestClassForAccessOrder();
-
-        $childPropertyValue = 'child property value';
-        $parentPropertyValue = 'parent property value';
-
-        $child->parentProperty = $childPropertyValue;
-        $parent->parentProperty = $parentPropertyValue;
-
-        $this->assertEquals($childPropertyValue, $child->parentProperty);
-        $this->assertEquals($parentPropertyValue, $parent->parentProperty);
-    }
-
-    public function test_named_arguments_to_accessor_method_are_handled(): void
-    {
-        $obj = new #[Get, Set] class {
-            use Accessible;
-
-            protected string $a = 'some value';
-
-            public function getAValue(): string
+            public function getFooValue(): string
             {
-                return $this->a;
+                return $this->foo;
             }
         };
 
-        $expectedValue = 'new value';
+        $expectedValue = 'new foo';
 
         /** @phpstan-ignore-next-line */
-        $obj->set(a: ['a' => $expectedValue]);
+        $obj->set(foo: ['foo' => $expectedValue]);
 
         $this->assertEquals(
             $expectedValue,
-            $obj->getAValue()
+            $obj->getFooValue()
         );
     }
 }
