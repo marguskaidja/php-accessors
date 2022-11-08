@@ -1,20 +1,20 @@
 [![Tests](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml/badge.svg)](https://github.com/marguskaidja/php-accessors/actions/workflows/tests.yml)
 # Accessors
 
-Current library can create automatic accessors (e.g. _getters_ and _setters_) for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class, which will then handle situations, where _inaccessible_ (aka `protected`) property is accessed.
+Current library can create automatic accessors (e.g. _getters_ and _setters_) for object properties. It works by injecting a trait with [magic methods for property overloading](https://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members) into desired class, which will act on attempts to access `protected` (_inaccessible for outside_) properties.
 
 #### Features
 * Multiple accessor **syntaxes**:
     * direct assignment syntax:
-        * `$value = $foo->property`
-        * `$foo->property = 'value'`
+        * `$bar = $foo->bar`
+        * `$foo->bar = 'new bar'`
     * method syntax (**customizable format**):
-        * `$value = $foo->get('property')`
-        * `$value = $foo->property()`
-        * `$foo->property('value')`
-        * `$foo->setProperty('value')`
-        * `$foo->set('property1', 'value1')`
-        * `$foo->set(['property1' => 'value1', 'property2' => 'value2', ..., 'propertyN' => 'valueN'])`
+        * `$bar = $foo->get('bar')`
+        * `$bar = $foo->bar()`
+        * `$foo->bar('value')`
+        * `$foo->setBar('value')`
+        * `$foo->set('bar', 'new bar')`
+        * `$foo->set(['bar' => 'new bar', 'baz' => 'new baz', ..., 'qux' => 'new qux'])`
 * Easy and straightforward **configuration** using [Attributes](https://www.php.net/manual/en/language.attributes.overview.php):
     * No custom initialization code has to be called from class constructors to make things work.
     * Accessors can be configured _per_ property or for all class at once.
@@ -36,7 +36,20 @@ Install with composer:
 composer require margusk/accessors
 ```
 
-## Usage
+## Contents
+- [Basic usage](#basic-usage)
+  - [Immutable properties](#immutable-properties)
+  - [Configuration inheritance](#configuration-inheritance)
+  - [Case sensitivity in property names](#case-sensitivity-in-property-names)
+  - [IDE autocompletion](#ide-autocompletion)
+  - [Unsetting properties](#unsetting-properties)
+- [Advanced usage](#advanced-usage) 
+  - [Mutator](#mutator)
+  - [Accessor endpoints](#accessor-endpoints)
+  - [Customizing format of accessor method names](#customizing-format-of-accessor-method-names)
+- [API](#api)
+
+## Basic usage
 
 Consider following class with manually generated accessor methods:
 ```php
@@ -287,6 +300,137 @@ Notes:
 * Unsetting immutable properties is not possible and results in exception.
 * When `#[Immutable]` is defined on a class then it must be done on top of hierarchy and not in somewhere between. This is to enforce consistency throughout all of the inheritance. This effectively prohibits situations when there's mutable parent but in derived class the same inherited properties can be turned suddenly immutable.
 
+
+### Configuration inheritance
+
+Inheritance is quite straightforward. Attributes in parent class are inherited by children and can be overwritten (except `#[Immutable]` and `#[Format]`):
+
+```php
+use margusk\Accessors\Attr\{
+    Get, Set
+};
+use margusk\Accessors\Accessible;
+
+#[Get,Set]
+class A
+{
+    use Accessible;
+}
+
+class B extends A
+{
+    protected string $foo;
+
+    #[Set(false)]
+    protected string $bar;
+}
+
+$b = new B();
+$b->foo = 'new foo';
+echo $b->foo;           // Outputs "new foo"
+$b->bar = 'new bar';    // Results in Exception
+```
+
+### Case sensitivity in property names
+
+Following rules apply when dealing with case-sensitivity in property names:
+1. When property is accessed with method syntax, where property name is part of method name, then it's treated as case-insensitive. Thus if for whatever reason you have properties which differ only in casing, then the last defined property is used:
+
+```php
+use margusk\Accessors\Attr\{
+    Get, Set
+};
+use margusk\Accessors\Accessible;
+
+#[Get,Set]
+class A
+{
+    use Accessible;
+
+    protected string $foo = 'foo';
+    protected string $FOO = 'FOO';
+}
+
+$a = new A();
+$a->setFoo('value');        // Case insensitive => A::$FOO is modified
+$a->foo('value');           // Case insensitive => A::$FOO is modified
+$a->Foo('value');           // Case insensitive => A::$FOO is modified
+```
+2. For all other situations, the property names are always treated as _case-sensitive_:
+
+```php
+$a->set('foo', 'value');    // A::$foo is modified
+echo $a->foo;               // Outputs "foo"
+echo $a->FOO;               // Outputs "FOO"
+echo $a->Foo;               // Results in Exception because property "Foo" doesn't exist
+```
+
+### IDE autocompletion
+
+Having accessors with _magic methods_ can bring the disadvantages of losing somewhat of IDE autocompletion and make static code analyzers grope in the dark.
+
+To inform static code parsers about availability of magic methods and properties, PHPDocs [@method](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/method.html) and [@property](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) should be specified in class'es DocBlock:
+
+```php
+use margusk\Accessors\Accessible;
+
+/**
+ * @property        string $foo
+ * @property-read   string $bar
+ * 
+ * @method string   getFoo()
+ * @method self     setFoo(string $value)
+ * @method string   getBar()
+ */
+class A
+{
+    use Accessible;
+
+    protected string $foo = "foo";
+    
+    protected string $bar = "bar";
+}
+$a = new A();
+echo $a->setFoo('foo is updated')->foo; // Outputs "foo is updated"
+echo $a->bar; // Outputs "bar"
+```   
+
+Since `@property[<-read>|<-write>]` tags act also in exposing properties, you get the documentation and the actual documented behaviour **both at the same time**.
+
+
+### Unsetting properties
+
+If there's ever necessity, then it's also possible to unset properties with using `#[Delete]`:
+
+```php
+use margusk\Accessors\Attr\{
+    Get, Delete
+};
+use margusk\Accessors\Accessible;
+
+#[Get]
+class A
+{
+    use Accessible;
+
+    #[Delete]
+    protected string $foo;
+
+    protected string $bar;
+}
+
+$a = new A();
+$a->unsetFoo();     // Ok.
+unset($a->foo);     // Ok.
+unset($a->bar);     // Results in Exception
+```
+
+Notes:
+* since `Unset` is reserved word, `Delete` is used as Attribute name instead.
+
+
+## Advanced usage
+
 ### Mutator
 
 With _setters_, it's sometimes necessary to have the assignable value passed through some intermediate function, before assigning to property. This function is called _mutator_ and can be specified using `#[Mutator]` attribute:
@@ -373,104 +517,14 @@ Notes:
     * `set` and `unset` are discarded and current object instance is always returned.
     * `with` endpoint are handed over to caller **only if** value is `object` and derived from current class. Other values are discarded and original caller gets `clone`-d object instance.
 
-### Unsetting properties
 
-If there's ever necessity, then it's also possible to unset properties with using `#[Delete]`:
 
-```php
-use margusk\Accessors\Attr\{
-    Get, Delete
-};
-use margusk\Accessors\Accessible;
 
-#[Get]
-class A
-{
-    use Accessible;
-
-    #[Delete]
-    protected string $foo;
-
-    protected string $bar;
-}
-
-$a = new A();
-$a->unsetFoo();     // Ok.
-unset($a->foo);     // Ok.
-unset($a->bar);     // Results in Exception
-```
-
-Notes:
-* since `Unset` is reserved word, `Delete` is used as Attribute name instead.
-
-### Configuration inheritance
-
-Inheritance is quite straightforward. Attributes in parent class are inherited by children and can be overwritten (except `#[Immutable]` and `#[Format]`):
-
-```php
-use margusk\Accessors\Attr\{
-    Get, Set
-};
-use margusk\Accessors\Accessible;
-
-#[Get,Set]
-class A
-{
-    use Accessible;
-}
-
-class B extends A
-{
-    protected string $foo;
-
-    #[Set(false)]
-    protected string $bar;
-}
-
-$b = new B();
-$b->foo = 'new foo';
-echo $b->foo;           // Outputs "new foo"
-$b->bar = 'new bar';    // Results in Exception
-```
-
-### Case sensitivity in property names
-
-Following rules apply when dealing with case-sensitivity in property names:
-1. When property is accessed with method syntax, where property name is part of method name, then it's treated as case-insensitive. Thus if for whatever reason you have properties which differ only in casing, then the last defined property is used:
-
-```php
-use margusk\Accessors\Attr\{
-    Get, Set
-};
-use margusk\Accessors\Accessible;
-
-#[Get,Set]
-class A
-{
-    use Accessible;
-
-    protected string $foo = 'foo';
-    protected string $FOO = 'FOO';
-}
-
-$a = new A();
-$a->setFoo('value');        // Case insensitive => A::$FOO is modified
-$a->foo('value');           // Case insensitive => A::$FOO is modified
-$a->Foo('value');           // Case insensitive => A::$FOO is modified
-```
-2. For all other situations, the property names are always treated as _case-sensitive_:
-
-```php
-$a->set('foo', 'value');    // A::$foo is modified
-echo $a->foo;               // Outputs "foo"
-echo $a->FOO;               // Outputs "FOO"
-echo $a->Foo;               // Results in Exception because property "Foo" doesn't exist
-```
 
 ### Customizing format of accessor method names
 Usually the names for accessor methods are just straightforward _camel-case_'d names like `get<property>`, `set<property>` and so on. But if necessary, it can be customized.
 
-Customization can be achieved using `#[Format(class-string<FormatContract>)]` attribute with first parameter specifying class name. This class is responsible for parsing out accessor methods names. 
+Customization can be achieved using `#[Format(class-string<FormatContract>)]` attribute with first parameter specifying class name. This class is responsible for parsing out accessor methods names.
 
 Following example turns _camel-case_ methods into _snake-case_:
 
@@ -522,37 +576,6 @@ echo $a->setFoo("new foo");                 // Results in Exception
 Notes:
 * `#[Format(...)]` can be defined only for a class and on top of hierarchy. This is to enforce consistency throughout all of the inheritance tree. This effectively prohibits situations when there's one syntax in parent but in derived classes the syntax suddenly changes.
 
-### IDE autocompletion
-
-Having accessors with _magic methods_ can bring the disadvantages of losing somewhat of IDE autocompletion and make static code analyzers grope in the dark.
-
-To inform static code parsers about availability of magic methods and properties, PHPDocs [@method](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/method.html) and [@property](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) should be specified in class'es DocBlock:
-
-```php
-use margusk\Accessors\Accessible;
-
-/**
- * @property        string $foo
- * @property-read   string $bar
- * 
- * @method string   getFoo()
- * @method self     setFoo(string $value)
- * @method string   getBar()
- */
-class A
-{
-    use Accessible;
-
-    protected string $foo = "foo";
-    
-    protected string $bar = "bar";
-}
-$a = new A();
-echo $a->setFoo('foo is updated')->foo; // Outputs "foo is updated"
-echo $a->bar; // Outputs "bar"
-```   
-
-Since `@property[<-read>|<-write>]` tags act also in exposing properties, you get the documentation and the actual documented behaviour **both at the same time**.
 
 ## API
 
@@ -560,18 +583,18 @@ Since `@property[<-read>|<-write>]` tags act also in exposing properties, you ge
 
 1. Use `margusk\Accessors\Accessible` trait inside the class which properties you want to expose.
 2. Configure with following attributes:
-   *  Use `#[Get]`, `#[Set]` and/or `#[Delete]` (from namespace `margusk\Accessors\Attr`) before the declaration of the property or whole you want to expose:
-       * All them take optional `bool` parameter which can be set to `false` to deny specific accessor for the property or whole class. This is useful in situtations where override from previous setting is needed.
-       * `#[Get(bool $enabled = true)]`: allow or disable read access to property. Works in conjunction with allowing/denying `isset` on property.
-       * `#[Set(bool $enabled = true)]`: allow or disable to write access the property.
-       * `#[Delete(bool $enabled = true)]`: allow or disable `unset()` of the property.
-   * `#[Mutator(string|array|null $callback)]`:
-       * the `$callback` parameter works almost like `callable` but with a tweak in `string` type:
-       * if `string` type is used then it must contain regular function name or syntax `$this->someMutatorMethod` implies instance method.
-       * use `array` type for specifying static class method.
-       * and use `null` to discard any previously set mutator.
-   * `#[Immutable]`: turns an property or whole class immutable. When used on a class, then it must be defined on top of hierarchy. Once defined, it can't be disabled later.
-   * `#[Format(class-string<FormatContract>)]`: allows customization of accessor method names.
+    *  Use `#[Get]`, `#[Set]` and/or `#[Delete]` (from namespace `margusk\Accessors\Attr`) before the declaration of the property or whole you want to expose:
+        * All them take optional `bool` parameter which can be set to `false` to deny specific accessor for the property or whole class. This is useful in situtations where override from previous setting is needed.
+        * `#[Get(bool $enabled = true)]`: allow or disable read access to property. Works in conjunction with allowing/denying `isset` on property.
+        * `#[Set(bool $enabled = true)]`: allow or disable to write access the property.
+        * `#[Delete(bool $enabled = true)]`: allow or disable `unset()` of the property.
+    * `#[Mutator(string|array|null $callback)]`:
+        * the `$callback` parameter works almost like `callable` but with a tweak in `string` type:
+        * if `string` type is used then it must contain regular function name or syntax `$this->someMutatorMethod` implies instance method.
+        * use `array` type for specifying static class method.
+        * and use `null` to discard any previously set mutator.
+    * `#[Immutable]`: turns an property or whole class immutable. When used on a class, then it must be defined on top of hierarchy. Once defined, it can't be disabled later.
+    * `#[Format(class-string<FormatContract>)]`: allows customization of accessor method names.
 
 Notes:
 * Only `protected` properties are supported. Due current library's implementation, `private` properties may introduce unexpected behaviour and anomalies in inheritance chain and are disregarded this time.
@@ -606,3 +629,6 @@ Notes:
 * `$isFooSet = isset($a->foo);`
 * `$isFooSet = $a->issetFoo();`
 * `$isFooSet = $a->isset('foo');`
+
+## License
+This library is released under the MIT License.
