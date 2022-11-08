@@ -70,10 +70,7 @@ class Properties
                 ReflectionMethod::IS_PROTECTED | ReflectionMethod::IS_PUBLIC
             ) as $rfMethod
         ) {
-            if (
-                $rfMethod->isStatic()
-                || $rfClass->name !== $rfMethod->getDeclaringClass()->name
-            ) {
+            if ($rfMethod->isStatic()) {
                 continue;
             }
 

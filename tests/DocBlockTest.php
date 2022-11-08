@@ -124,44 +124,4 @@ class DocBlockTest extends TestCase
          */
         $obj->foo;
     }
-
-    /**
-     * @throws Exception
-     */
-    public function testPropertyTagFromParentClassMustBeInherited(): void
-    {
-        $parentName = $this->createClass(
-            '
-            /**
-             * @property string $foo
-             */
-            class %name%
-            {
-                use '.Accessible::class.';
-    
-                protected string $foo;
-            }        
-        '
-        );
-
-        $child = $this->createObjFromClassCode(
-            '
-            class %name% extends '.$parentName.'
-            {
-            }
-        '
-        );
-
-        $expectedValue = $this->randomString();
-
-        /** @phpstan-ignore-next-line */
-        $child->setFoo($expectedValue);
-
-        $this->assertEquals(
-            $expectedValue,
-            /** @phpstan-ignore-next-line */
-            $child->getFoo()
-        );
-    }
-
 }

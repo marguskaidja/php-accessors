@@ -337,6 +337,8 @@ class SetTest extends TestCase
         return new #[Set] class {
             use Accessible;
 
+            private string $private = 'private';
+
             public string $public = 'public';
 
             protected string $foo = 'foo';
@@ -394,6 +396,28 @@ class SetTest extends TestCase
 
         /** @phpstan-ignore-next-line */
         $obj->setPublic('new public');
+    }
+
+    public function testSetPrivatePropertyWithDirectSyntaxMustFail(): void
+    {
+        $obj = $this->defaultTestObject();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set unknown property|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->private = 'this must fail';
+    }
+
+    public function testSetPrivatePropertyWithMethodSyntaxMustFail(): void
+    {
+        $obj = $this->defaultTestObject();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to set unknown property|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->setPrivate('this must fail');
     }
 
     /**

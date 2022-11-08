@@ -103,6 +103,8 @@ class GetTest extends TestCase
         return new #[Get] class {
             use Accessible;
 
+            private string $private = 'private';
+
             public string $public = 'public';
 
             protected string $foo = 'foo';
@@ -162,6 +164,31 @@ class GetTest extends TestCase
 
         /** @phpstan-ignore-next-line */
         $obj->getPublic();
+    }
+
+    public function testGetPrivatePropertyWithDirectSyntaxMustFail(): void
+    {
+        $obj = $this->defaultTestObject();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to get unknown property|');
+
+        /**
+         * @noinspection PhpExpressionResultUnusedInspection
+         * @phpstan-ignore-next-line
+         */
+        $obj->private;
+    }
+
+    public function testGetPrivatePropertyWithMethodSyntaxMustFail(): void
+    {
+        $obj = $this->defaultTestObject();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('|tried to get unknown property|');
+
+        /** @phpstan-ignore-next-line */
+        $obj->getPrivate();
     }
 
     public function testIssetMustReturnFalseForUninitializedProperty(): void

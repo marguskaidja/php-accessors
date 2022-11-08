@@ -45,29 +45,39 @@ class InheritanceTest extends TestCase
     }
 
     /**
-     * The '$foo' property in class $parentName MUST not be accessible through child class and should throw
-     * error when accessed, because child class Attributes can not change parent properties.
+     * The '$foo' property in class $parentName MUST not be set to writable through child class and should throw
+     * error when tried to written to, because child class Attributes can not change parent properties.
+     *
+     * Though, reading must still work, because that's how it's configured in parent class.
      *
      * @return void
      */
-    public function testChildClassAtrributesMustNotChangeParentClassProperties(): void
+    public function testChildAttributesMustNotChangeBehaviourOfParentClassProperties(): void
     {
         $parentName = $this->createClass(
             '
             class %name% {
                 use '.Accessible::class.';
-                #['.Set::class.'(false)]
-                protected string $foo;
+                #['.Get::class.','.Set::class.'(false)]
+                protected string $foo = "foo";
             }
         '
         );
 
         $child = $this->createObjFromClassCode(
             '
-            #['.Set::class.'(true)]
+            /**
+             * @property string $foo
+             */
+            #['.Get::class.'(false),'.Set::class.'(true)]
             class %name% extends '.$parentName.' {
             }
         '
+        );
+
+        $this->assertEquals(
+            'foo',
+            $child->foo
         );
 
         $this->expectException(InvalidArgumentException::class);
@@ -84,7 +94,7 @@ class InheritanceTest extends TestCase
      * @return void
      * @throws Exception
      */
-    public function testParentClassAttributesMustBeInheritedByDefaultIntoChild(): void
+    public function testParentClassAttributesMustBeInheritedByDefaultByChild(): void
     {
         $parentName = $this->createClass(
             '
@@ -143,6 +153,172 @@ class InheritanceTest extends TestCase
             $expectedValue,
             /** @phpstan-ignore-next-line */
             $child->foo()
+        );
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testPropertyTagFromParentClassMustBeInherited(): void
+    {
+        $parentName = $this->createClass(
+            '
+            /**
+             * @property string $foo
+             */
+            class %name%
+            {
+                use '.Accessible::class.';
+    
+                protected string $foo;
+            }        
+        '
+        );
+
+        $child = $this->createObjFromClassCode(
+            '
+            class %name% extends '.$parentName.'
+            {
+            }
+        '
+        );
+
+        $expectedValue = $this->randomString();
+
+        /** @phpstan-ignore-next-line */
+        $child->setFoo($expectedValue);
+
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $child->getFoo()
+        );
+    }
+
+    /**
+     * The '$foo' property in child class can be redefined and must inherit the current default attributes
+     *
+     * @return void
+     */
+    public function testChildClassMustBeAbleToRedefineProperties(): void
+    {
+        $parentName = $this->createClass(
+            '
+            class %name% {
+                use '.Accessible::class.';
+                protected string $foo = "parent foo";
+            }
+        '
+        );
+
+        $child = $this->createObjFromClassCode(
+            '
+            #['.Get::class.'(true),'.Set::class.'(true)]
+            class %name% extends '.$parentName.' {
+                protected string $foo = "child foo";
+            }
+        '
+        );
+
+        $this->assertEquals(
+            'child foo',
+            /** @phpstan-ignore-next-line */
+            $child->foo
+        );
+
+        $expectedValue = $this->randomString();
+
+        /** @phpstan-ignore-next-line */
+        $child->foo = $expectedValue;
+
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $child->foo
+        );
+    }
+
+    /**
+     * When parent has property $foo (without any endpoint defined) and child defines method setFoo(),
+     * then this method must not be used for endpoint because it breaks the consistency in hierarchy.
+     *
+     * @return void
+     * @throws Exception
+     */
+    public function testChildCantDefineEndpointForParentProperty(): void
+    {
+        $parentName = $this->createClass(
+            '
+            #['.Get::class.'(true),'.Set::class.'(true)]
+            class %name% {
+                use '.Accessible::class.';
+                protected string $foo = "foo";
+            }
+        '
+        );
+
+        $child = $this->createObjFromClassCode(
+            '
+            class %name% extends '.$parentName.' {
+                public function setFoo(string $value): void
+                {
+                    $this->foo = "this method must not be honoured";
+                }
+            }
+        '
+        );
+
+        $expectedValue = $this->randomString();
+
+        /** @phpstan-ignore-next-line */
+        $child->foo = $expectedValue;
+
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $child->foo
+        );
+    }
+
+    /**
+     * When child defines a property $foo (without endpoint) and parent contains matching endpoint setFoo(),
+     * then parent's endpoint must be honoured.
+     *
+     * @return void
+     * @throws Exception
+     */
+    public function testParentEndpointMustApplyToChildProperties(): void
+    {
+        $expectedValue = 'this is parent endpoint';
+
+        $parentName = $this->createClass(
+            '
+            #['.Get::class.'(true),'.Set::class.'(true)]
+            class %name% {
+                use '.Accessible::class.';
+                public function setFoo(string $value): void
+                {
+                    $this->foo = "' . $expectedValue . '";
+                }
+            }
+        '
+        );
+
+        $child = $this->createObjFromClassCode(
+            '
+            class %name% extends '.$parentName.' {
+                protected string $foo = "foo";
+            }
+        '
+        );
+
+        /** @phpstan-ignore-next-line */
+        $child->foo = $this->randomString();
+
+        $this->assertEquals(
+            $expectedValue,
+            /** @phpstan-ignore-next-line */
+            $child->foo
         );
     }
 }
