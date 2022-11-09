@@ -46,13 +46,18 @@ class Properties
     public static function fromReflection(
         ReflectionClass $rfClass,
         Attributes $classAttributes,
-        ?Properties $parentProperties
+        ?Properties $parentProperties,
+        bool $withPHPDocs
     ): self
     {
         $that = new self();
 
         /* Learn from DocBlock comments which properties should be exposed and how (read-only,write-only or both) */
-        $phpDocAttributes = $that->parsePHPDoc($rfClass);
+        if ($withPHPDocs) {
+            $phpDocAttributes = $that->parsePHPDocs($rfClass);
+        } else {
+            $phpDocAttributes = [];
+        }
 
         /** @var Format $attr */
         $attr = $classAttributes->get(Format::class);
@@ -128,7 +133,7 @@ class Properties
      *
      * @return array<string, Attributes>
      */
-    private function parsePHPDoc(ReflectionClass $rfClass): array
+    private function parsePHPDocs(ReflectionClass $rfClass): array
     {
         static $phpDocParser = null;
         static $phpDocLexer = null;
@@ -163,7 +168,7 @@ class Properties
                 && $childNode->value instanceof PropertyTagValueNode
                 && str_starts_with($childNode->value->propertyName, '$')
             ) {
-                $attributes = Attributes::fromPHPDoc($childNode);
+                $attributes = Attributes::fromPHPDocs($childNode);
 
                 if (null !== $attributes) {
                     $result[substr($childNode->value->propertyName, 1)] = $attributes;

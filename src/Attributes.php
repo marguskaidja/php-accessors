@@ -70,7 +70,7 @@ class Attributes
         return $that;
     }
 
-    public static function fromPHPDoc(PhpDocTagNode $tagNode): ?self
+    public static function fromPHPDocs(PhpDocTagNode $tagNode): ?self
     {
         /** @var array<class-string<Attr>, bool> $found */
         $found = match (strtolower($tagNode->name)) {
