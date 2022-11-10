@@ -31,6 +31,7 @@ use function strtolower;
  *  $value = $foo->bar();       // Same as $value = $foo->bar;
  *  $foo->bar('new value');    // Same as $foo->bar = `new value`;
  * ```
+ * @api
  */
 class Standard implements FormatContract
 {

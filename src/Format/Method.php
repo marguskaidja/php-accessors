@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Format;
 
+/** @api */
 final class Method
 {
     public const TYPE_GET = 'get';
