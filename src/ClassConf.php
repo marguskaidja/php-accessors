@@ -26,6 +26,7 @@ use function array_shift;
 use function call_user_func;
 use function count;
 use function current;
+use function get_class;
 use function get_parent_class;
 use function in_array;
 use function is_string;
@@ -171,7 +172,7 @@ final class ClassConf
      * @return ClassConf
      * @throws ReflectionException
      */
-    public static function findConf(string $name): ClassConf
+    private static function findConf(string $name): ClassConf
     {
         if (!isset(self::$classes[$name])) {
             self::$classes[$name] = new self($name);
@@ -343,10 +344,12 @@ final class ClassConf
      *
      * @return mixed
      */
-    public function handleMagicCall(object $object, string $method, array $args): mixed
+    public static function handleMagicCall(object $object, string $method, array $args): mixed
     {
+        $classConf = self::findConf(get_class($object));
+
         /** @var Format $attr */
-        $attr = $this->attributes->get(Format::class);
+        $attr = $classConf->attributes->get(Format::class);
         $format = $attr->instance();
 
         if (null !== ($parsedMethod = $format->matchCalled($method))) {
@@ -376,7 +379,7 @@ final class ClassConf
         ) {
             if ($nArgs > 1) {
                 throw InvalidArgumentException::dueMultiPropertyAccessorCanHaveExactlyOneArgument(
-                    self::class,
+                    $classConf->name,
                     $method
                 );
             }
@@ -386,7 +389,7 @@ final class ClassConf
         } elseif (
             // Check if whole method name is property name like $obj->somePropertyName('somevalue')
             null === $accessorMethod
-            && null !== $this->properties->findConf($propertyName, true)
+            && null !== $classConf->properties->findConf($propertyName, true)
             && $format->allowPropertyNameOnly()
         ) {
             // If there are zero arguments, then interpret the call as Getter
@@ -401,7 +404,7 @@ final class ClassConf
 
         // Accessor method must be resolved at this point, or we fail
         if (null === $accessorMethod) {
-            throw BadMethodCallException::dueUnknownAccessorMethod(self::class, $method);
+            throw BadMethodCallException::dueUnknownAccessorMethod($classConf->name, $method);
         }
 
         $propertyNameCI = false;
@@ -411,14 +414,14 @@ final class ClassConf
         if (0 === count($propertiesList)) {
             if ('' === $propertyName) {
                 if (!count($args)) {
-                    throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument(self::class, $method);
+                    throw InvalidArgumentException::dueMethodIsMissingPropertyNameArgument($classConf->name, $method);
                 }
 
                 $propertyName = array_shift($args);
 
                 if (!is_string($propertyName)) {
                     throw InvalidArgumentException::duePropertyNameArgumentMustBeString(
-                        self::class,
+                        $classConf->name,
                         $method,
                         count($args) + 1
                     );
@@ -433,7 +436,7 @@ final class ClassConf
             if ($accessorMethodIsSetOrWith) {
                 if (!count($args)) {
                     throw InvalidArgumentException::dueMethodIsMissingPropertyValueArgument(
-                        self::class,
+                        $classConf->name,
                         $method,
                         $nArgs + 1
                     );
@@ -445,7 +448,7 @@ final class ClassConf
             // Fail if there are more arguments specified than we are willing to process
             if (count($args)) {
                 throw InvalidArgumentException::dueMethodHasMoreArgumentsThanExpected(
-                    self::class,
+                    $classConf->name,
                     $method,
                     $nArgs - count($args)
                 );
@@ -466,18 +469,18 @@ final class ClassConf
                 $result = clone $result;
             }
 
-            $accessorImpl = $this->setter;
+            $accessorImpl = $classConf->setter;
 
             foreach ($propertiesList as $propertyName => $propertyValue) {
                 if (!is_string($propertyName)) {
                     throw InvalidArgumentException::dueMultiPropertyArrayContainsNonStringProperty(
-                        self::class,
+                        $classConf->name,
                         $method,
                         $propertyName
                     );
                 }
 
-                $propertyConf = $this->properties->findConf($propertyName, $propertyNameCI);
+                $propertyConf = $classConf->properties->findConf($propertyName, $propertyNameCI);
                 $immutable = ($propertyConf?->isImmutable()) ?? false;
 
                 // Check if mutable/immutable property was called using correct method:
@@ -489,12 +492,12 @@ final class ClassConf
                 ) {
                     if ($immutable) {
                         throw BadMethodCallException::dueImmutablePropertiesMustBeCalledUsingWith(
-                            self::class,
+                            $classConf->name,
                             $propertyName
                         );
                     } else {
                         throw BadMethodCallException::dueMutablePropertiesMustBeCalledUsingSet(
-                            self::class,
+                            $classConf->name,
                             $propertyName
                         );
                     }
@@ -505,21 +508,21 @@ final class ClassConf
         } else {
             /** @var 'get'|'isset'|'unset' $accessorMethod */
             $accessorImpl = match ($accessorMethod) {
-                Method::TYPE_GET => $this->getter,
-                Method::TYPE_ISSET => $this->isSetter,
-                Method::TYPE_UNSET => $this->unSetter
+                Method::TYPE_GET => $classConf->getter,
+                Method::TYPE_ISSET => $classConf->isSetter,
+                Method::TYPE_UNSET => $classConf->unSetter
             };
 
             foreach ($propertiesList as $propertyName) {
                 if (!is_string($propertyName)) {
                     throw InvalidArgumentException::dueMultiPropertyArrayContainsNonStringProperty(
-                        self::class,
+                        $classConf->name,
                         $method,
                         $propertyName
                     );
                 }
 
-                $propertyConf = $this->properties->findConf($propertyName, $propertyNameCI);
+                $propertyConf = $classConf->properties->findConf($propertyName, $propertyNameCI);
                 $result = $accessorImpl($result, $propertyName, $propertyConf);
             }
         }
@@ -527,37 +530,42 @@ final class ClassConf
         return $result;
     }
 
-    public function handleMagicGet(object $object, string $propertyName): mixed
+    public static function handleMagicGet(object $object, string $propertyName): mixed
     {
-        return ($this->getter)(
+        $classConf = self::findConf(get_class($object));
+
+        return ($classConf->getter)(
             $object,
             $propertyName,
-            $this->properties->findConf($propertyName)
+            $classConf->properties->findConf($propertyName)
         );
     }
 
-    public function handleMagicIsset(object $object, string $propertyName): bool
+    public static function handleMagicIsset(object $object, string $propertyName): bool
     {
-        return ($this->isSetter)(
+        $classConf = self::findConf(get_class($object));
+
+        return ($classConf->isSetter)(
             $object,
             $propertyName,
-            $this->properties->findConf($propertyName)
+            $classConf->properties->findConf($propertyName)
         );
     }
 
-    public function handleMagicSet(object $object, string $propertyName, mixed $propertyValue): void
+    public static function handleMagicSet(object $object, string $propertyName, mixed $propertyValue): void
     {
-        $propertyConf = $this->properties->findConf($propertyName);
+        $classConf = self::findConf(get_class($object));
+        $propertyConf = $classConf->properties->findConf($propertyName);
         $immutable = $propertyConf?->isImmutable();
 
         if ($immutable) {
             throw BadMethodCallException::dueImmutablePropertiesCantBeSetUsingAssignmentOperator(
-                $this->name,
+                $classConf->name,
                 $propertyName
             );
         }
 
-        ($this->setter)(
+        ($classConf->setter)(
             $object,
             'set',
             $propertyName,
@@ -566,12 +574,14 @@ final class ClassConf
         );
     }
 
-    public function handleMagicUnset(object $object, string $propertyName): void
+    public static function handleMagicUnset(object $object, string $propertyName): void
     {
-        ($this->unSetter)(
+        $classConf = self::findConf(get_class($object));
+
+        ($classConf->unSetter)(
             $object,
             $propertyName,
-            $this->properties->findConf($propertyName)
+            $classConf->properties->findConf($propertyName)
         );
     }
 }
