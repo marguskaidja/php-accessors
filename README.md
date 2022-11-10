@@ -15,13 +15,12 @@ Current library can create automatic accessors (e.g. _getters_ and _setters_) fo
         * `$foo->setBar('value')`
         * `$foo->set('bar', 'new bar')`
         * `$foo->set(['bar' => 'new bar', 'baz' => 'new baz', ..., 'qux' => 'new qux'])`
-* Easy and straightforward **configuration** using [Attributes](https://www.php.net/manual/en/language.attributes.overview.php):
+* Easy **configuration** using [Attributes](https://www.php.net/manual/en/language.attributes.overview.php):
     * No custom initialization code has to be called from class constructors to make things work.
     * Accessors can be configured _per_ property or for all class at once.
-    * Inheritance and override support. E.g. set default behaviour for whole class and make exceptions for specific properties.
-    * No variables, functions nor methods will be polluted into user classes or global namespace (except necessary `__get()`/`__set()`/`__isset()`/`__unset()`/`__call()`).
-    * [_PHPDoc_](https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/property.html) tags `@property`, `@property-read` and `@property-write` can be used instead of basic Attributes.
-* _Weak_ **immutability** support backed by _wither_ methods.
+    * Inheritance and override support, e.g. set default behaviour for whole class but make exceptions for specific properties.
+    * No variables, functions nor methods will be polluted into user classes or global namespace except necessary `__get()`/`__set()`/`__isset()`/`__unset()`/`__call()`.
+* **immutability** support, backed by _wither_ methods.
 * **Mutator** support for _setters_.
 
 ## Requirements
@@ -47,6 +46,7 @@ composer require margusk/accessors
   - [Mutator](#mutator)
   - [Accessor endpoints](#accessor-endpoints)
   - [Customizing format of accessor method names](#customizing-format-of-accessor-method-names)
+  - [PHPDocs support](#phpdocs-support)
 - [API](#api)
 
 ## Basic usage
@@ -110,14 +110,15 @@ echo $a->getFoo();  // Outputs "foo"
 echo $a->getBar();  // Outputs "bar"
 echo $a->getBaz();  // Outputs "baz"
 ```
-Besides the fact that boilerplate code for _getters_ has been avoided, there's also  _direct assignment_ syntax available now, which wasn't even possible with initial object:
+Besides the fact that boilerplate code for _getters_ has been avoided, there's also  _direct assignment_ syntax available now, which wasn't even possible with initial class:
 ```php
 echo $a->foo;  // Outputs "foo"
 echo $a->bar;  // Outputs "bar"
 echo $a->baz;  // Outputs "baz"
 ```
 
-### Further examples
+---
+
 If there's  lot's of properties to expose, then it's not reasonable to mark each one of them separately. Mark all properties at once in the class declaration:
 
 ```php
@@ -136,8 +137,7 @@ class A
     protected string $baz = "baz";
 }
 ```
-Make all properties readable except `$bar`:
-
+Now turn off readability of `$baz`:
 ```php
 use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Accessible;
@@ -149,14 +149,15 @@ class A
 
     protected string $foo = "foo";
 
-    #[Get(false)]
     protected string $bar = "bar";
 
+    #[Get(false)]
     protected string $baz = "baz";
 }
 $a = new A();
 echo $a->getFoo();   // Outputs "foo"
-echo $a->getBar();   // Results in Exception
+echo $a->getBar();   // Outputs "bar"
+echo $a->getBaz();   // Results in Exception
 ```
 What about writing to properties? Yes, just add `#[Set]` attribute:
 
@@ -180,32 +181,6 @@ class A
 $a = new A();
 echo $a->setFoo("new foo")->getFoo();  // Outputs "new foo"
 $a->setBar("new bar");                 // Results in Exception
-```
-
-But can't I use _PHPDoc_ tags to indicate the readability and writability of a property?
-
-Sure can! Same class from above, but configured using _PHPDoc_ tags:
-
-```php
-use margusk\Accessors\Accessible;
-
-/**
- * @property        string $foo 
- * @property-read   string $bar
- */
-class A
-{
-    use Accessible;
-
-    protected string $foo = "foo";
-
-    protected string $bar = "bar";
-}
-
-$a = new A();
-echo $a->setFoo("new foo")->getFoo();   // Outputs "new foo"
-echo $a->bar;                           // Outputs "bar"
-$a->setBar("new bar");                  // Results in Exception
 ```
 
 ### Immutable properties
@@ -236,15 +211,16 @@ class A
     }
 }
 
-// Configure object $a
-$a = new A(1, 2, 3, 4, 5, 6);
+// Configure object $foo
+$foo = new A(1, 2, 3, 4, 5, 6);
 
-// Configure object $b, which differs from $a only by single value (property A::$f).
-// But to achieve this, we have to retrieve all the rest of the values from object $a and
+// Create object $bar, which differs from $foo only by single value (property A::$f).
+//
+// To achieve this, we have to retrieve the rest of the values from object $foo and
 // pass to constructor to create new object.
 // 
 // This results in unnecessary complexity and unreadability.
-$b = new B($a->a, $a->b,  $a->c,  $a->d,  $a->e,  7);
+$bar = new B($foo->a, $foo->b,  $foo->c,  $foo->d,  $foo->e,  7);
 ```
 
 With `#[Immutable]` attribute things get simpler:
@@ -272,27 +248,27 @@ class A
     }
 }
 
-// Configure object $a
-$a = new A(1, 2, 3, 4, 5, 6);
+// Configure object $foo
+$foo = new A(1, 2, 3, 4, 5, 6);
 
-// Clone object $a and change only 1 property in cloned object.
-$b = $a->with('f', 7);
+// Clone object $foo with having changed one property.
+$bar = $foo->with('f', 7);
 
-// Clone object $a and change 3 properties in cloned object.
-$b = $a->with([
+// Clone object $foo with having changed three properties.
+$bar = $foo->with([
     'a' => 11,
     'b' => 12,
     'f' => 7
 ]);
 
 // Original object still stays intact
-echo (int)($a === $b); // Outputs "0"
-echo $a->f; // Outputs "6"
-echo $b->f; // Outputs "7"
+echo (int)($foo === $bar); // Outputs "0"
+echo $foo->f; // Outputs "6"
+echo $bar->f; // Outputs "7"
 ```
 
 Notes:
-* Immutability here is _weak_ and should not to be confused with [strong immutability](https://en.wikipedia.org/wiki/Immutable_object#Weak_vs_strong_immutability):
+* Immutability here is _weak_ and should not to be confused with [strong immutability](https://en.wikipedia.org/wiki/Immutable_object#Weak_vs_strong_immutability), e.g.:
     * There's no rule how much of the object should be made immutable. It can be only one property or whole object (all properties) if wanted.
     * Nested immutability is not enforced, thus property can contain another mutable object.
     * Immutable properties can be still changed inside the owner object.
@@ -303,7 +279,9 @@ Notes:
 
 ### Configuration inheritance
 
-Inheritance is quite straightforward. Attributes in parent class are inherited by children and can be overwritten (except `#[Immutable]` and `#[Format]`):
+Inheritance works straightforward. Attributes in parent class declaration are inherited into derived class and can be overwritten (except `#[Immutable]` and `#[Format]`).
+
+The internals of inheritance is illustrated with following example: 
 
 ```php
 use margusk\Accessors\Attr\{
@@ -311,24 +289,37 @@ use margusk\Accessors\Attr\{
 };
 use margusk\Accessors\Accessible;
 
-#[Get,Set]
+// Class A makes all it's properties readable/writable by default
+#[Get(true),Set(true)]
 class A
 {
     use Accessible;
+
+    protected string $foo = "foo";
 }
 
+// Class B inherits implicit #[Get(true)] from parent class but disables explicitly
+// write access for all it's properties with #[Set(false)]
+#[Set(false)]
 class B extends A
 {
-    protected string $foo;
+    protected string $bar = "bar";
 
-    #[Set(false)]
-    protected string $bar;
+    // Make exception for $bar and disable it's read access explicitly
+    #[Get(false)]
+    protected string $baz = "baz";
 }
 
 $b = new B();
-$b->foo = 'new foo';
+$b->foo = 'new foo';    // Works because $foo was defined by class A and that's where it gets it's
+                        // write access
 echo $b->foo;           // Outputs "new foo"
-$b->bar = 'new bar';    // Results in Exception
+echo $b->bar;           // Outputs "bar"
+
+$b->bar = "new bar";    // Results in Exception because class A disables write access by default for
+                        // all it's properties
+
+echo $b->baz;           // Results in Exception because read access was specifically for $baz disabled
 ```
 
 ### Case sensitivity in property names
@@ -352,17 +343,17 @@ class A
 }
 
 $a = new A();
-$a->setFoo('value');        // Case insensitive => A::$FOO is modified
-$a->foo('value');           // Case insensitive => A::$FOO is modified
-$a->Foo('value');           // Case insensitive => A::$FOO is modified
+$a->setFoo('value');        // Case insensitive => $FOO is modified
+$a->foo('value');           // Case insensitive => $FOO is modified
+$a->Foo('value');           // Case insensitive => $FOO is modified
 ```
 2. For all other situations, the property names are always treated as _case-sensitive_:
 
 ```php
-$a->set('foo', 'value');    // A::$foo is modified
+$a->set('foo', 'value');    // $foo is modified
 echo $a->foo;               // Outputs "foo"
 echo $a->FOO;               // Outputs "FOO"
-echo $a->Foo;               // Results in Exception because property "Foo" doesn't exist
+echo $a->Foo;               // Results in Exception because property $Foo doesn't exist
 ```
 
 ### IDE autocompletion
@@ -373,6 +364,7 @@ To inform static code parsers about availability of magic methods and properties
 
 ```php
 use margusk\Accessors\Accessible;
+use margusk\Accessors\Attr\{Get, Set};
 
 /**
  * @property        string $foo
@@ -386,17 +378,15 @@ class A
 {
     use Accessible;
 
+    #[Get,Set]
     protected string $foo = "foo";
-    
+    #[Get]
     protected string $bar = "bar";
 }
 $a = new A();
 echo $a->setFoo('foo is updated')->foo; // Outputs "foo is updated"
 echo $a->bar; // Outputs "bar"
 ```   
-
-Since `@property[<-read>|<-write>]` tags act also in exposing properties, you get the documentation and the actual documented behaviour **both at the same time**.
-
 
 ### Unsetting properties
 
@@ -576,6 +566,42 @@ echo $a->setFoo("new foo");                 // Results in Exception
 Notes:
 * `#[Format(...)]` can be defined only for a class and on top of hierarchy. This is to enforce consistency throughout all of the inheritance tree. This effectively prohibits situations when there's one syntax in parent but in derived classes the syntax suddenly changes.
 
+
+### PHPDocs support
+But "_I always use PHPDoc tags in the front of my class to indicate IDE about magic properties. Wouldn't those comments act magically as configuration so I wouldn't have to type the same thing using Attributes?_"
+
+If you consider some caveats (below) then sure, they work. Class configured merely using _PHPDoc_ tags:
+```php
+use margusk\Accessors\Accessible\WithPHPDocs as AccessibleWithPHPDocs;
+
+/**
+ * @property        string $foo 
+ * @property-read   string $bar
+ */
+class A
+{
+    use AccessibleWithPHPDocs;
+
+    protected string $foo = "foo";
+
+    protected string $bar = "bar";
+}
+
+$a = new A();
+echo $a->setFoo("new foo")->getFoo();   // Outputs "new foo"
+echo $a->bar;                           // Outputs "bar"
+$a->setBar("new bar");                  // Results in Exception
+```
+
+**Warning**: this time `AccessibleWithPHPDocs` trait was injected instead of `Accessible`. This is to signal explicit usage with _PHPDocs_ support.
+
+The issue with _PHPDoc_ tags is that depending of server's configuration, they may prove of beeing totally useless.
+
+In case [OPCache extension](https://www.php.net/manual/en/intro.opcache.php) is enabled and configured with [**opcache.save_comments=0**](https://www.php.net/manual/en/opcache.configuration.php#ini.opcache.save-comments), then annotations from sourcecode are lost for [ReflectionClass::getDocComment()](https://www.php.net/manual/en/reflectionclass.getdoccomment).
+
+Generally when OPCache default settings are used, then comments will be preserved. But for performance reasons there's always possibility to turn them off. Thatswhy relying on this feature needs explicit consideration, to make sure that the developed code works in the environment where it's going to be deployed.
+
+If youre not sure, then stick with Attributes. They always work.
 
 ## API
 
