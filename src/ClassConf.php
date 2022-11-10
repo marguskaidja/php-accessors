@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace margusk\Accessors;
 
 use Closure;
+use margusk\Accessors\Accessible\WithPHPDocs as AccessibleWithPHPDocs;
 use margusk\Accessors\Attr\{Immutable, Format};
 use margusk\Accessors\Exception\BadMethodCallException;
 use margusk\Accessors\Exception\InvalidArgumentException;
@@ -58,6 +59,9 @@ final class ClassConf
     /** @var bool */
     private bool $isAccessible;
 
+    /** @var bool */
+    private bool $withPHPDocs;
+
     /**
      * @param  class-string  $name
      *
@@ -75,19 +79,20 @@ final class ClassConf
         $this->parent = (
         false !== $parentName
             ?
-            self::factory($parentName)
+            self::findConf($parentName)
             :
             null
         );
 
         /* Check if parent class or current contains 'Accessible' trait */
-        $isParentAccessible = ($this->parent ? $this->parent->isAccessible : false);
-        $this->isAccessible = $isParentAccessible
-            || in_array(
-                Accessible::class,
-                $rfClass->getTraitNames(),
-                true
-            );
+        if ($this->parent && $this->parent->isAccessible) {
+            $isParentAccessible = true;
+            $this->isAccessible = true;
+            $this->withPHPDocs = $this->parent->withPHPDocs;
+        } else {
+            $isParentAccessible = false;
+            list($this->isAccessible, $this->withPHPDocs) = $this->isClassUsingAccessibleTrait($rfClass);
+        }
 
         /* Don't parse anything unless current class uses Accessible trait */
         if ($this->isAccessible) {
@@ -118,7 +123,7 @@ final class ClassConf
                 $parentProperties = $parent->properties;
             } else {
                 /**
-                 * Since this is the top of the hierachy using "Accessible" trait, assign default instance
+                 * This is the top of the hierachy using "Accessible" trait, assign default instance
                  * for #[Format] attribute if it's not custom defined.
                  */
                 $this->attributes->setIfNull(
@@ -129,7 +134,12 @@ final class ClassConf
                 $parentProperties = null;
             }
 
-            $this->properties = Properties::fromReflection($rfClass, $this->attributes, $parentProperties);
+            $this->properties = Properties::fromReflection(
+                $rfClass,
+                $this->attributes,
+                $parentProperties,
+                $this->withPHPDocs
+            );
 
             $this->getter = $this->createGetter();
             $this->setter = $this->createSetter();
@@ -139,6 +149,15 @@ final class ClassConf
             /* Attributes in non-Accessible classes have no effect */
             $this->attributes = new Attributes();
             $this->properties = new Properties();
+
+            $notAccessible = function () {
+                throw BadMethodCallException::dueClassNotUsingAccessibleTrait($this->name);
+            };
+
+            $this->getter = $notAccessible;
+            $this->setter = $notAccessible;
+            $this->isSetter = $notAccessible;
+            $this->unSetter = $notAccessible;
         }
     }
 
@@ -152,7 +171,7 @@ final class ClassConf
      * @return ClassConf
      * @throws ReflectionException
      */
-    public static function factory(string $name): ClassConf
+    public static function findConf(string $name): ClassConf
     {
         if (!isset(self::$classes[$name])) {
             self::$classes[$name] = new self($name);
@@ -289,6 +308,32 @@ final class ClassConf
 
             return $object;
         })->bindTo(null, $this->name);
+    }
+
+    /**
+     * @param  ReflectionClass<object>  $rfClass
+     *
+     * @return array{0: bool, 1: bool}
+     */
+    private function isClassUsingAccessibleTrait(ReflectionClass $rfClass): array
+    {
+        foreach ($rfClass->getTraits() as $n => $trait) {
+            if ($n === AccessibleWithPHPDocs::class) {
+                return [true, true];
+            }
+
+            if ($n === Accessible::class) {
+                return [true, false];
+            }
+
+            $retVal = $this->isClassUsingAccessibleTrait($trait);
+
+            if (true === $retVal[0]) {
+                return $retVal;
+            }
+        }
+
+        return [false, false];
     }
 
     /**
@@ -528,15 +573,5 @@ final class ClassConf
             $propertyName,
             $this->properties->findConf($propertyName)
         );
-    }
-
-    public function properties(): Properties
-    {
-        return $this->properties;
-    }
-
-    public function attributes(): Attributes
-    {
-        return $this->attributes;
     }
 }

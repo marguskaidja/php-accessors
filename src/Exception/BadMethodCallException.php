@@ -12,11 +12,24 @@ declare(strict_types=1);
 
 namespace margusk\Accessors\Exception;
 
+use margusk\Accessors\Accessible;
+
 use function sprintf;
 use function ucfirst;
 
 final class BadMethodCallException extends \BadMethodCallException
 {
+    public static function dueClassNotUsingAccessibleTrait(string $class): self
+    {
+        return new self(
+            sprintf(
+                'class "%s" does not use "%s" trait',
+                $class,
+                Accessible::class
+            )
+        );
+    }
+
     public static function dueUnknownAccessorMethod(string $class, string $method): self
     {
         return new self(

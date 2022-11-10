@@ -13,10 +13,8 @@ declare(strict_types=1);
 namespace margusk\Accessors\Tests;
 
 use Exception;
-use margusk\Accessors\ClassConf;
 use PHPUnit\Framework\Constraint\LogicalNot;
 use PHPUnit\Framework\TestCase as TestCaseBase;
-use ReflectionException;
 
 use function md5;
 

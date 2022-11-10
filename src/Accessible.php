@@ -26,7 +26,7 @@ trait Accessible
      */
     public function __call(string $method, array $args): mixed
     {
-        return ClassConf::factory(static::class)
+        return ClassConf::findConf(static::class)
             ->handleMagicCall($this, $method, $args);
     }
 
@@ -38,7 +38,7 @@ trait Accessible
      */
     public function __get(string $propertyName): mixed
     {
-        return ClassConf::factory(static::class)
+        return ClassConf::findConf(static::class)
             ->handleMagicGet($this, $propertyName);
     }
 
@@ -51,7 +51,7 @@ trait Accessible
      */
     public function __set(string $propertyName, mixed $propertyValue): void
     {
-        ClassConf::factory(static::class)
+        ClassConf::findConf(static::class)
             ->handleMagicSet($this, $propertyName, $propertyValue);
     }
 
@@ -63,7 +63,7 @@ trait Accessible
      */
     public function __isset(string $propertyName): bool
     {
-        return ClassConf::factory(static::class)
+        return ClassConf::findConf(static::class)
             ->handleMagicIsset($this, $propertyName);
     }
 
@@ -75,7 +75,7 @@ trait Accessible
      */
     public function __unset(string $propertyName): void
     {
-        ClassConf::factory(static::class)
+        ClassConf::findConf(static::class)
             ->handleMagicUnset($this, $propertyName);
     }
 }

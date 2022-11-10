@@ -13,7 +13,7 @@ declare(strict_types=1);
 namespace margusk\Accessors\Tests;
 
 use Exception;
-use margusk\Accessors\Accessible;
+use margusk\Accessors\Accessible\WithPHPDocs as AccessibleWithPHPDocs;
 use margusk\Accessors\Attr\Get;
 use margusk\Accessors\Attr\Set;
 use margusk\Accessors\Exception\InvalidArgumentException;
@@ -29,7 +29,7 @@ class PHPDocPropertyTest extends TestCase
          * @property string $foo
          */
         $obj = new class {
-            use Accessible;
+            use AccessibleWithPHPDocs;
 
             protected string $foo = 'foo';
         };
@@ -64,7 +64,7 @@ class PHPDocPropertyTest extends TestCase
          * @property-read string $foo
          */
         $obj = new class {
-            use Accessible;
+            use AccessibleWithPHPDocs;
 
             protected string $foo = 'foo';
         };
@@ -93,7 +93,7 @@ class PHPDocPropertyTest extends TestCase
          * @property-write string $foo
          */
         $obj = new class {
-            use Accessible;
+            use AccessibleWithPHPDocs;
 
             protected string $foo = 'foo';
 
@@ -134,7 +134,7 @@ class PHPDocPropertyTest extends TestCase
          * @property string $foo
          */
         $obj = new class {
-            use Accessible;
+            use AccessibleWithPHPDocs;
 
             #[Get(false),Set(false)]
             protected string $foo = 'foo';
@@ -163,7 +163,7 @@ class PHPDocPropertyTest extends TestCase
          * @property-read string $foo
          */
         $obj = new #[Get,Set] class {
-            use Accessible;
+            use AccessibleWithPHPDocs;
 
             protected string $foo = 'foo';
         };
